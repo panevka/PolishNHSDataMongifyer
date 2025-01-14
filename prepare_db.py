@@ -75,12 +75,22 @@ class HealthcareDataProcessing:
             "format": "json",
             "api-version": 1.2
         }
-        response_data = APIClient(NFZAPI_BASE_URL).fetch(endpoint='agreements', params=params)
-        parsed_response = AgreementsPage(**response_data)
-        agreements = parsed_response.data.agreements
-        page_number = parsed_response.meta.page
-        for agreement in agreements:
-            FileDataManagement.save_page(page_data=agreement.model_dump_json(),branch_code=branch, page_number=page_number, request_page_limit=limit)
+        response_data = APIClient(NFZAPI_BASE_URL).fetch(endpoint='agreements', params=params)  
+        try:
+            parsed_response = AgreementsPage(**response_data)
+            agreements = parsed_response.data.agreements
+            page_number = parsed_response.meta.page
+            serialized_agreements = [agreement.model_dump_json() for agreement in agreements]
+            serialized_json = "[" + ",".join(serialized_agreements) + "]"
+            pretty_json = json.dumps(json.loads(serialized_json), indent=4)
+
+            FileDataManagement.save_page(pretty_json,
+                                        branch_code=branch,
+                                        page_number=page_number,
+                                        request_page_limit=limit)
+        except Exception as e:
+            logging.error(f"Unexpected error occurred: {str(e)}")
+            logging.error(traceback.format_exc())
     
 def main():
     HealthcareDataProcessing.process_agreements()
