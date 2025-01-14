@@ -63,8 +63,6 @@ class FileDataManagement:
         except Exception as e:
             logging.error(f"Unexpected error occurred: {str(e)}")
             logging.error(traceback.format_exc())
-        finally:
-            file.close()
                 
 
 class HealthcareDataProcessing:
