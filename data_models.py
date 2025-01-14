@@ -90,7 +90,7 @@ class AgreementsMeta(BaseModel):
 
 class AgreementsPage(BaseModel):
     meta: AgreementsMeta
-    links: Optional[AgreementLinks]
+    links: Optional[PageLinks]
     data: AgreementsData
 
 
