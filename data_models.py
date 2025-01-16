@@ -71,7 +71,7 @@ class Agreement(BaseModel):
 class AgreementsData(BaseModel):
     agreements: List[Agreement]
 
-class AgreementsMeta(BaseModel):
+class PageMeta(BaseModel):
     context: Optional[HttpUrl] = Field(alias="@context")
     count: Optional[PositiveInt]
     page: Optional[PositiveInt]
@@ -89,7 +89,7 @@ class AgreementsMeta(BaseModel):
     version: Optional[str]
 
 class AgreementsPage(BaseModel):
-    meta: AgreementsMeta
+    meta: PageMeta
     links: Optional[PageLinks]
     data: AgreementsData
 
