@@ -77,9 +77,7 @@ class FileDataManagement:
 class HealthcareDataProcessing:
     
     def has_next_page(agreements_page: AgreementsPage):
-       if agreements_page.links.next_page:
-           return True
-       return False
+       return agreements_page.links is not None and agreements_page.links.next_page is not None
 
     def process_agreements(year=2025, branch="10", service_type="04", limit=25, timeout=1.5):
         params = {
