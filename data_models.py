@@ -93,6 +93,52 @@ class AgreementsPage(BaseModel):
     links: Optional[PageLinks]
     data: AgreementsData
 
+class AgreementAttributes(BaseModel):
+    """Represents the attributes of an agreement."""
+    code: Optional[str]
+    technical_code: Optional[str] = Field(alias="technical-code")
+    origin_code: Optional[str] = Field(alias="origin-code")
+    service_type: Optional[str] = Field(alias="service-type")
+    service_name: Optional[str] = Field(alias="service-name") 
+    amount: Optional[PositiveFloat]
+    updated_at: Optional[datetime] = Field(alias="updated-at")
+    provider_code: Optional[str] = Field(alias="provider-code")
+    provider_nip: Optional[str] = Field(alias="provider-nip")
+    provider_regon: Optional[str] = Field(alias="provider-regon")
+    provider_registry_number: Optional[str] = Field(alias="provider-registry-number")
+    provider_name: Optional[str] = Field(alias="provider-name")
+    provider_place: Optional[str] = Field(alias="provider-place")
+    year: Optional[PositiveInt]
+    branch: Optional[Branch]
+
+    class Config:
+        """Configuration for field aliases and other settings."""
+        populate_by_name = True
+
+class ProviderAttributes(BaseModel):
+    branch: Optional[Branch]
+    code: Optional[str]
+    name: Optional[str]
+    nip: Optional[str]
+    regon: Optional[str]
+    registry_number: Optional[str] = Field(alias="registry-number")
+    post_code: Optional[str] = Field(alias="post-code")
+    street: Optional[str]
+    place: Optional[str]
+    phone: Optional[str]
+    commune: Optional[str]
+
+class Provider(BaseModel):
+    type: str = "dictionary-provider-entry"
+    attributes: ProviderAttributes
+
+class ProviderData(BaseModel):
+    entries: List[Provider]
+
+class ProvidersPage(BaseModel):
+    meta: PageMeta
+    links: Optional[PageLinks]
+    data: ProviderData
 
 
 
