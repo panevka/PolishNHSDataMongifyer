@@ -79,12 +79,12 @@ class HealthcareDataProcessing:
     def has_next_page(agreements_page: AgreementsPage):
        return agreements_page.links is not None and agreements_page.links.next_page is not None
 
-    def process_agreements(year=2025, branch="10", service_type="04", limit=25, timeout=1.5):
+    def process_agreements(year=2025, branch="10", service_type="04", limit=25, timeout=1.5, startPage=1):
         params = {
             "year": year,
             "branch": branch,
             "serviceType": service_type,
-            "page": 1,
+            "page": startPage,
             "limit": limit,
             "format": "json",
             "api-version": 1.2
