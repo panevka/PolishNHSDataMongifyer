@@ -1,12 +1,14 @@
+import time
 import json
 import logging
 import os
 import traceback
+from typing import List
 import requests
 import sys
 
 sys.path.append('../PolishNHSDataMongifyer')
-from data_models import Agreement, AgreementsPage, Branch
+from data_models import Agreement, AgreementsPage, Branch, Provider, ProvidersPage
 
 logging.basicConfig(
     level=logging.INFO,
@@ -72,11 +74,23 @@ class FileDataManagement:
         except Exception as e:
             logging.error(f"Unexpected error occurred: {str(e)}")
             logging.error(traceback.format_exc())
+
+    @staticmethod
+    def save_provider(provider_data, file_path):
+        try:
+            with open(file_path, "a") as file:
+                file.write(provider_data)
+
+        except ValueError as e:
+            logging.error(f"ValueError occurred: {e}")
+        except Exception as e:
+            logging.error(f"Unexpected error occurred: {str(e)}")
+            logging.error(traceback.format_exc())
                 
 
 class HealthcareDataProcessing:
-    
-    def has_next_page(agreements_page: AgreementsPage):
+
+    def has_next_page(agreements_page: AgreementsPage|ProvidersPage):
        return agreements_page.links is not None and agreements_page.links.next_page is not None
 
     def process_agreements(year=2025, branch="10", service_type="04", limit=25, timeout=1.5, startPage=1):
@@ -109,8 +123,47 @@ class HealthcareDataProcessing:
             except Exception as e:
                 logging.error(f"Unexpected error occurred: {str(e)}")
                 logging.error(traceback.format_exc())
+
+    def get_provider_info(provider_code: List, branch, year=2025):
+        params = {
+            "year": year,
+            "code": provider_code,
+            "branch": branch,
+            "limit": 1,
+            "format": "json",
+            "api-version": 1.2
+        }
+        
+        try:
+            response_data = APIClient(NFZAPI_BASE_URL).fetch(endpoint='providers', params=params)  
+            parsed_response = ProvidersPage(**response_data)
+            providers = parsed_response.data.entries
+            return providers[0].model_dump_json()
+        except Exception as e:
+            logging.error(f"Unexpected error occurred: {str(e)}")
+            logging.error(traceback.format_exc())
+
+    def process_output_providers(branch: Branch):
+        branch_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "HealthCareData", FileDataManagement.get_voivodeship_name(branch))
+        output_file = os.path.join(branch_path, "Providers.json")
+        try:
+            for page_file in os.listdir(branch_path):
+                file_path = os.path.join(branch_path, page_file)
+                with open(file_path, 'r') as json_file:
+                    data = json.load(json_file)
+                    providers = [agreement["attributes"]["provider_code"] for agreement in data]
+                    for provider_code in providers:
+                        time.sleep(1.3)
+                        provider_data = HealthcareDataProcessing.get_provider_info(provider_code, branch)
+                        if(provider_data):
+                            FileDataManagement.save_provider(provider_data, output_file)
+        except Exception as e:
+            logging.error(f"Unexpected error occurred: {str(e)}")
+            logging.error(traceback.format_exc())
+
     
 def main():
-    HealthcareDataProcessing.process_agreements()
+    # HealthcareDataProcessing.process_agreements("10")
+    HealthcareDataProcessing.process_output_providers("10")
 
 main()
