@@ -4,25 +4,23 @@ from enum import Enum
 from pydantic import BaseModel, HttpUrl, PositiveFloat, PositiveInt, Field
 from enum import Enum
 
-Branch = Enum('Branch', {
-    "Dolnoslaskie": "01",
-"KujawskoPomorskie": "02",
-"Lubelskie": "03",
-"Lubuskie": "04",
-"Lodzkie": "05",
-"Malopolskie": "06",
-"Mazowieckie": "07",
-"Opolskie": "08",
-"Podkarpackie": "09",
-"Podlaskie": "10",
-"Pomorskie": "11",
-"Slaskie": "12",
-"Swietokrzyskie": "13",
-"WarminskoMazurskie": "14",
-"Wielkopolskie": "15",
-"Zachodniopomorskie": "16"
-
-})
+class Branch(str, Enum):
+    Dolnoslaskie: str = "01"
+    KujawskoPomorskie: str = "02"
+    Lubelskie: str = "03"
+    Lubuskie: str = "04"
+    Lodzkie: str = "05"
+    Malopolskie: str = "06"
+    Mazowieckie: str = "07"
+    Opolskie: str = "08"
+    Podkarpackie: str = "09"
+    Podlaskie: str = "10"
+    Pomorskie: str = "11"
+    Slaskie: str = "12"
+    Swietokrzyskie: str = "13"
+    WarminskoMazurskie: str = "14"
+    Wielkopolskie: str = "15"
+    Zachodniopomorskie: str = "16"
 
 class AgreementAttributes(BaseModel):
     """Represents the attributes of an agreement."""
