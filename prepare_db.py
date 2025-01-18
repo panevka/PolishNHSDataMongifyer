@@ -7,9 +7,12 @@ from typing import Dict, List
 from pydantic import TypeAdapter, parse_obj_as
 import requests
 import sys
+from dotenv import load_dotenv
 
 sys.path.append('../PolishNHSDataMongifyer')
-from data_models import Agreement, AgreementsData, AgreementsPage, Branch, Provider, ProvidersPage
+from data_models import Agreement, AgreementsData, AgreementsPage, Branch, Provider, ProvidersPage, Response, Result
+
+load_dotenv()
 
 logging.basicConfig(
     level=logging.INFO,
@@ -22,6 +25,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 NFZAPI_BASE_URL = "https://api.nfz.gov.pl/app-umw-api"
+GEOAPIFY_BASE_URL = "https://api.geoapify.com/v1"
 
 class APIClient:
     def __init__(self, base_url):
@@ -90,7 +94,36 @@ class FileDataManagement:
             else:
                 providers_list = []
 
-            providers_list.append(provider_data.model_dump())
+            providers_list.append(provider_data.model_dump(by_alias=True))
+            with open(file_path, "w") as file:
+                json.dump(providers_list, file, ensure_ascii=False, indent=4)
+
+        except ValueError as e:
+            logging.error(f"ValueError occurred: {e}")
+        except Exception as e:
+            logging.error(f"Unexpected error occurred: {str(e)}")
+            logging.error(traceback.format_exc())
+    
+    @staticmethod
+    def save_provider_geo_data(provider: Provider, geo_data: Result, file_path):
+        try:
+            if os.path.exists(file_path):
+                with open(file_path, "r") as file:
+                    try:
+                        providers_list = json.load(file) 
+                        if not isinstance(providers_list, list):
+                            providers_list = []
+                    except json.JSONDecodeError:
+                        providers_list = []
+            else:
+                providers_list = []
+
+
+            provider_entry = {
+                "provider-code": provider.attributes.code,
+                "geo-data": geo_data.model_dump(by_alias=True)
+            }
+            providers_list.append(provider_entry)
             with open(file_path, "w") as file:
                 json.dump(providers_list, file, ensure_ascii=False, indent=4)
 
@@ -124,7 +157,7 @@ class HealthcareDataProcessing:
                 next_page = HealthcareDataProcessing.has_next_page(parsed_response)
                 agreements = parsed_response.data.agreements
                 page_number = parsed_response.meta.page
-                serialized_agreements = [agreement.model_dump_json() for agreement in agreements]
+                serialized_agreements = [agreement.model_dump_json(by_alias=True) for agreement in agreements]
                 serialized_json = "[" + ",".join(serialized_agreements) + "]"
                 pretty_json = json.dumps(json.loads(serialized_json), indent=4)
 
@@ -178,9 +211,47 @@ class HealthcareDataProcessing:
             logging.error(f"Unexpected error occurred: {str(e)}")
             logging.error(traceback.format_exc())
 
+    def get_provider_geographical_data(provider: Provider):
+        attr = provider.attributes
+        apiKey = os.getenv("GEOAPIFY_KEY")
+        params = {
+            "city": attr.place,
+            "street": attr.street,
+            "postcode": attr.post_code,
+            "country": "Poland",
+            "lang": "pl",
+            "limit": 1,
+            "type": "amenity",
+            "format": "json",
+            "filter": "countrycode:pl",
+            "bias" : "countrycode:pl",
+            "apiKey": apiKey
+        }
+        try:
+            data = APIClient(GEOAPIFY_BASE_URL).fetch(endpoint="geocode/search", params=params)
+            res = Response(**data)
+            return res.results[0]
+        except Exception as e:
+            logging.error(f"Unexpected error occurred: {str(e)}")
+            logging.error(traceback.format_exc())
+
+    def process_provider_geographical_data(branch: Branch):
+        branch_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "HealthCareData", FileDataManagement.get_voivodeship_name(branch))
+        input_file = os.path.join(branch_path, "Providers.json")
+        output_file = os.path.join(branch_path, "ProvidersGeographicalData.json")
+        with open(input_file, "r") as file:
+            try:
+                data = json.load(file)
+                ProvidersList = TypeAdapter(List[Provider])
+                providers = ProvidersList.validate_python(data)
+                for provider in providers:
+                    geo_data = HealthcareDataProcessing.get_provider_geographical_data(provider)
+                    FileDataManagement.save_provider_geo_data(provider, geo_data, output_file)
+            except Exception as e:
+                logging.error(f"Unexpected error occurred: {str(e)}")
+                logging.error(traceback.format_exc())
     
 def main():
-    # HealthcareDataProcessing.process_agreements(branch="10")
-    HealthcareDataProcessing.process_output_providers("10")
+    HealthcareDataProcessing.process_provider_geographical_data("10")
 
 main()
