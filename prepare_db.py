@@ -3,12 +3,13 @@ import json
 import logging
 import os
 import traceback
-from typing import List
+from typing import Dict, List
+from pydantic import TypeAdapter, parse_obj_as
 import requests
 import sys
 
 sys.path.append('../PolishNHSDataMongifyer')
-from data_models import Agreement, AgreementsPage, Branch, Provider, ProvidersPage
+from data_models import Agreement, AgreementsData, AgreementsPage, Branch, Provider, ProvidersPage
 
 logging.basicConfig(
     level=logging.INFO,
@@ -76,10 +77,22 @@ class FileDataManagement:
             logging.error(traceback.format_exc())
 
     @staticmethod
-    def save_provider(provider_data, file_path):
+    def save_provider(provider_data: Provider, file_path):
         try:
-            with open(file_path, "a") as file:
-                file.write(provider_data)
+            if os.path.exists(file_path):
+                with open(file_path, "r") as file:
+                    try:
+                        providers_list = json.load(file) 
+                        if not isinstance(providers_list, list):
+                            providers_list = []
+                    except json.JSONDecodeError:
+                        providers_list = []
+            else:
+                providers_list = []
+
+            providers_list.append(provider_data.model_dump())
+            with open(file_path, "w") as file:
+                json.dump(providers_list, file, ensure_ascii=False, indent=4)
 
         except ValueError as e:
             logging.error(f"ValueError occurred: {e}")
@@ -124,11 +137,11 @@ class HealthcareDataProcessing:
                 logging.error(f"Unexpected error occurred: {str(e)}")
                 logging.error(traceback.format_exc())
 
-    def get_provider_info(provider_code: List, branch, year=2025):
+    def get_provider_info(provider_code: List, branch: Branch, year=2025):
         params = {
             "year": year,
             "code": provider_code,
-            "branch": branch,
+            "branch": str(branch),
             "limit": 1,
             "format": "json",
             "api-version": 1.2
@@ -138,7 +151,7 @@ class HealthcareDataProcessing:
             response_data = APIClient(NFZAPI_BASE_URL).fetch(endpoint='providers', params=params)  
             parsed_response = ProvidersPage(**response_data)
             providers = parsed_response.data.entries
-            return providers[0].model_dump_json()
+            return providers[0]
         except Exception as e:
             logging.error(f"Unexpected error occurred: {str(e)}")
             logging.error(traceback.format_exc())
@@ -147,11 +160,13 @@ class HealthcareDataProcessing:
         branch_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "HealthCareData", FileDataManagement.get_voivodeship_name(branch))
         output_file = os.path.join(branch_path, "Providers.json")
         try:
+            AgreementsList = TypeAdapter(List[Agreement])
             for page_file in os.listdir(branch_path):
                 file_path = os.path.join(branch_path, page_file)
                 with open(file_path, 'r') as json_file:
                     data = json.load(json_file)
-                    providers = [agreement["attributes"]["provider_code"] for agreement in data]
+                    agreements = AgreementsList.validate_python(data)
+                    providers = [agreement.attributes.provider_code for agreement in agreements]
                     for provider_code in providers:
                         time.sleep(1.3)
                         provider_data = HealthcareDataProcessing.get_provider_info(provider_code, branch)
@@ -163,7 +178,7 @@ class HealthcareDataProcessing:
 
     
 def main():
-    # HealthcareDataProcessing.process_agreements("10")
+    HealthcareDataProcessing.process_agreements(branch="10")
     HealthcareDataProcessing.process_output_providers("10")
 
 main()
