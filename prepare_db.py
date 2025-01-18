@@ -159,6 +159,7 @@ class HealthcareDataProcessing:
     def process_output_providers(branch: Branch):
         branch_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "HealthCareData", FileDataManagement.get_voivodeship_name(branch))
         output_file = os.path.join(branch_path, "Providers.json")
+        processed_providers = []
         try:
             AgreementsList = TypeAdapter(List[Agreement])
             for page_file in os.listdir(branch_path):
@@ -166,19 +167,20 @@ class HealthcareDataProcessing:
                 with open(file_path, 'r') as json_file:
                     data = json.load(json_file)
                     agreements = AgreementsList.validate_python(data)
-                    providers = [agreement.attributes.provider_code for agreement in agreements]
-                    for provider_code in providers:
+                    for agreement in agreements:
                         time.sleep(1.3)
-                        provider_data = HealthcareDataProcessing.get_provider_info(provider_code, branch)
-                        if(provider_data):
-                            FileDataManagement.save_provider(provider_data, output_file)
+                        if agreement.attributes.provider_code not in processed_providers:
+                            provider_data = HealthcareDataProcessing.get_provider_info(agreement.attributes.provider_code, branch)
+                            if(provider_data):
+                                FileDataManagement.save_provider(provider_data, output_file)
+                                processed_providers.append(provider_data.attributes.code)
         except Exception as e:
             logging.error(f"Unexpected error occurred: {str(e)}")
             logging.error(traceback.format_exc())
 
     
 def main():
-    HealthcareDataProcessing.process_agreements(branch="10")
+    # HealthcareDataProcessing.process_agreements(branch="10")
     HealthcareDataProcessing.process_output_providers("10")
 
 main()
