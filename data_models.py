@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 from enum import Enum
-from pydantic import BaseModel, HttpUrl, PositiveFloat, PositiveInt, Field
+from pydantic import BaseModel, HttpUrl, PositiveFloat, PositiveInt, Field, condecimal
 from enum import Enum
 
 class Branch(str, Enum):
@@ -138,6 +138,86 @@ class ProvidersPage(BaseModel):
     links: Optional[PageLinks]
     data: ProviderData
 
+class Bbox(BaseModel):
+    lon1: float
+    lat1: float
+    lon2: float
+    lat2: float
+
+class DataSource(BaseModel):
+    sourcename: str
+    attribution: str
+    license: str
+    url: HttpUrl
+
+class Timezone(BaseModel):
+    name: str
+    offset_STD: str
+    offset_STD_seconds: int
+    offset_DST: str
+    offset_DST_seconds: int
+    abbreviation_STD: str
+    abbreviation_DST: str
+
+class Rank(BaseModel):
+    importance: float
+    popularity: float
+    confidence: float
+    confidence_city_level: float
+    confidence_street_level: float
+    confidence_building_level: float
+    match_type: str
+
+class QueryParsed(BaseModel):
+    housenumber: Optional[str]
+    street: Optional[str]
+    postcode: Optional[str]
+    city: Optional[str]
+    country: Optional[str]
+    state: Optional[str]
+    expected_type: Optional[str]
+
+class Query(BaseModel):
+    text: Optional[str]
+    housenumber: Optional[str]
+    street: Optional[str]
+    postcode: Optional[str]
+    city: Optional[str]
+    country: Optional[str]
+    state: Optional[str]
+    parsed: QueryParsed
+
+class Result(BaseModel):
+    datasource: DataSource
+    name: Optional[str]
+    country: Optional[str]
+    country_code: Optional[str]
+    state: Optional[str]
+    district: Optional[str]
+    county: Optional[str]
+    city: Optional[str]
+    hamlet: Optional[str]
+    municipality: Optional[str]
+    postcode: Optional[str]
+    street: Optional[str]
+    lon: float
+    lat: float
+    housenumber: Optional[str]
+    result_type: Optional[str]
+    formatted: Optional[str]
+    address_line1: Optional[str]
+    address_line2: Optional[str]
+    timezone: Timezone
+    plus_code: Optional[str]
+    plus_code_short: Optional[str]
+    rank: Rank
+    place_id: str
+
+class Response(BaseModel):
+    results: List[Result]
+    query: Query
+
+    
 
 
  
