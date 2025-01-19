@@ -217,6 +217,12 @@ class Response(BaseModel):
     results: List[Result]
     query: Query
 
+# ProvidersGeographicalData.json entry model
+
+class ProviderGeoEntry(BaseModel):
+    code: str
+    geo_data: Result = Field(alias="geo-data")
+
 # MongoDB models
 
 class AgreementInfo(BaseModel):
@@ -247,9 +253,9 @@ class ProviderGeoData(BaseModel):
     city: str
     street: str
     building_number: str
-    commune: str
+    district: Optional[str]
     post_code: str
-    voivodeship: Branch
+    voivodeship: str
     location: Location
 
 
