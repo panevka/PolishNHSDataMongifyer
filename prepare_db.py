@@ -10,7 +10,7 @@ import sys
 from dotenv import load_dotenv
 
 sys.path.append('../PolishNHSDataMongifyer')
-from data_models import Agreement, AgreementsData, AgreementsPage, Branch, Provider, ProvidersPage, Response, Result
+from data_models import Agreement, AgreementsData, AgreementsPage, Branch, Provider, ProviderInfo, ProvidersPage, Response, Result
 
 load_dotenv()
 
@@ -250,8 +250,65 @@ class HealthcareDataProcessing:
             except Exception as e:
                 logging.error(f"Unexpected error occurred: {str(e)}")
                 logging.error(traceback.format_exc())
-    
+
+class DatabaseSetup:                          
+    def establish_provider_info_collection(branch: Branch):
+        data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "HealthCareData", FileDataManagement.get_voivodeship_name(branch))
+        provider_path = os.path.join(data_path, "Providers.json")
+        provider_file = open(provider_path, "r")
+        for page in os.listdir(data_path):
+            if page == "Providers.json" or page == "ProvidersGeographicalData.json" or page == "ProvidersCollection.json":
+                continue
+            
+            file_path = os.path.join(data_path, page)
+            with open(file_path, "r") as agreements_file:
+                AgreementsList = TypeAdapter(List[Agreement])
+                agreements_list = json.load(agreements_file)
+                agreements = AgreementsList.validate_python(agreements_list)
+                for agreement in agreements:
+                    ProvidersList = TypeAdapter(List[Provider])
+                    providers_data = json.load(provider_file)
+                    providers = ProvidersList.validate_python(providers_data)
+                    for provider in providers:
+                        if(provider.attributes.code == agreement.attributes.provider_code):
+                            p = ProviderInfo(
+                            code = provider.attributes.code,
+                            nip = provider.attributes.nip,
+                            registry_number = provider.attributes.registry_number,
+                            name = provider.attributes.name,
+                            phone = provider.attributes.phone,
+                            regon = provider.attributes.regon,
+                            agreements=[agreement.id])
+                            path = os.path.join(data_path, "ProvidersCollection.json")
+                            p = p.model_dump()
+
+                            with open(path, "r") as f:
+                                try:
+                                    providers_list = json.load(f) 
+                                    if not isinstance(providers_list, list):
+                                        providers_list = []
+                                except json.JSONDecodeError:
+                                    providers_list = []
+
+                                ProviderInfoList = TypeAdapter(List[ProviderInfo])
+                                if(len(providers_list) > 0):
+                                    provs = ProviderInfoList.validate_python(providers_list)
+                                    if any(pr.code == agreement.attributes.provider_code for pr in provs):
+                                        for pr in provs:
+                                            if pr.code == agreement.attributes.provider_code:
+                                                pr.agreements.append(agreement.id)
+                                                break
+                                        providers_list = [prov.model_dump() for prov in provs]
+                                    else:
+                                        providers_list.append(p)
+                                else:
+                                    providers_list.append(p)
+
+                            with open(path, "w") as f:
+                                json.dump(providers_list, f, indent=4)
+                            provider_file.seek(0)
+                    
 def main():
-    HealthcareDataProcessing.process_provider_geographical_data("10")
+    DatabaseSetup.establish_provider_info_collection("10")
 
 main()
