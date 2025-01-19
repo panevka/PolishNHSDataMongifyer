@@ -236,7 +236,7 @@ class ProviderInfo(BaseModel):
     registry_number: str
     name: str
     phone: str
-    agreements: List[AgreementInfo]
+    agreements: Optional[List[str]]
 
 class Location(BaseModel):
     type: str = "Point"
