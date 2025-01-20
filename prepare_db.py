@@ -10,7 +10,7 @@ import sys
 from dotenv import load_dotenv
 
 sys.path.append('../PolishNHSDataMongifyer')
-from data_models import Agreement, AgreementsData, AgreementsPage, Branch, Provider, ProviderGeoData, ProviderGeoEntry, ProviderInfo, ProvidersPage, Response, Result
+from data_models import Agreement, AgreementInfo, AgreementsData, AgreementsPage, Branch, Provider, ProviderGeoData, ProviderGeoEntry, ProviderInfo, ProvidersPage, Response, Result
 
 load_dotenv()
 
@@ -340,9 +340,46 @@ class DatabaseSetup:
                     geo_collection.append(provider_collection_entry.model_dump())
                     json.dump(geo_collection, collection_file_write, indent=4)
                     collection_file_write.seek(0)
-    
+
+    def establish_agreements_collection(branch: Branch):
+        data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "HealthCareData", FileDataManagement.get_voivodeship_name(branch))
+        collection_file_path = os.path.join(data_path, "AgreementsCollection.json")
+        
+        for page in os.listdir(data_path):
+
+            if page.startswith("Page") is False: 
+                continue
+
+            page_path = os.path.join(data_path, page)
+            with open(page_path, "r") as page_file:
+                page_data= json.load(page_file)
+                with open(collection_file_path, "r") as collection_file_read:
+                    try:
+                        agreements_collection = json.load(collection_file_read)
+                        if not isinstance(agreements_collection, list):
+                            agreements_collection = []
+                    except json.JSONDecodeError:
+                        agreements_collection = []
+
+                for agreement in page_data:
+                    agr = Agreement(**agreement)
+                    agreement_info_entry = AgreementInfo(
+                        id = agr.id,
+                        code = agr.attributes.code,
+                        origin_code = agr.attributes.origin_code,
+                        service_type = agr.attributes.service_type,
+                        service_name = agr.attributes.service_name,
+                        amount = agr.attributes.amount,
+                        provider_code= agr.attributes.provider_code,
+                        year = agr.attributes.year
+                    )
+
+                    with open(collection_file_path, "w") as collection_file_write:
+                        agreements_collection.append(agreement_info_entry.model_dump())
+                        json.dump(agreements_collection, collection_file_write, indent=4)
+                        collection_file_write.seek(0)
                     
 def main():
-    DatabaseSetup.establish_provider_geo_collection("10")
+    DatabaseSetup.establish_agreements_collection("10")
 
 main()
