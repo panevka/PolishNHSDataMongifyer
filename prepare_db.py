@@ -5,6 +5,7 @@ import os
 import traceback
 from typing import Dict, List
 from pydantic import TypeAdapter, parse_obj_as
+from pathlib import Path
 import requests
 import sys
 from dotenv import load_dotenv
@@ -22,7 +23,6 @@ logging.basicConfig(
         logging.FileHandler("app.log")   
     ]
 )
-
 logger = logging.getLogger(__name__)
 
 NFZAPI_BASE_URL = "https://api.nfz.gov.pl/app-umw-api"
@@ -55,6 +55,40 @@ class APIClient:
         return ""
     
 class FileDataManagement:
+    def __init__(self, branch):
+        self.FILE_PATH = os.path.abspath(__file__)
+        self.FILE_DIR = os.path.dirname(self.FILE_PATH)
+        self.OUTPUT_DIR_PATH = os.path.join(self.FILE_DIR, "HealthCareData")
+
+        self.DATA_DIR = os.path.join(self.OUTPUT_DIR_PATH, FileDataManagement.get_voivodeship_name(branch), "Data" )
+        self.AGREEMENTS_DATA_DIR = os.path.join(self.DATA_DIR, "Agreements")
+        self.PROVIDERS_DATA = os.path.join(self.DATA_DIR, "ProvidersData.json")
+        self.PROVIDERS_GEO_DATA = os.path.join(self.DATA_DIR, "ProvidersGeographicalData.json")
+
+        self.COLLECTION_DIR = os.path.join(self.OUTPUT_DIR_PATH, FileDataManagement.get_voivodeship_name(branch), "Collections" )
+        self.PROVIDERS_COLLECTION = os.path.join(self.COLLECTION_DIR, "ProvidersInfoCollection.json")
+        self.PROVIDERS_GEO_COLLECTION = os.path.join(self.COLLECTION_DIR, "ProvidersGeoCollection.json")
+        self.AGREEMENTS_COLLECTION = os.path.join(self.COLLECTION_DIR, "AgreementsCollection.json")
+
+    def SetupFileStructure(self):
+        try:
+            Path(self.OUTPUT_DIR_PATH).mkdir(parents=True, exist_ok=True)
+            Path(self.DATA_DIR).mkdir(parents=True, exist_ok=True)
+            Path(self.COLLECTION_DIR).mkdir(parents=True, exist_ok=True)
+            
+            Path(self.PROVIDERS_COLLECTION).touch()
+            Path(self.PROVIDERS_GEO_COLLECTION).touch()
+            Path(self.AGREEMENTS_COLLECTION).touch()
+
+            Path(self.PROVIDERS_DATA).touch()
+            Path(self.PROVIDERS_GEO_DATA).touch()
+
+            Path(self.AGREEMENTS_DATA_DIR).mkdir(parents=True, exist_ok=True)
+            
+        except Exception as e:
+            logging.error(f"Unexpected error occurred during file structure setup: {str(e)}")
+            logging.error(traceback.format_exc())
+
     @staticmethod
     def get_voivodeship_name(branch_code: str):
         for name, code in Branch.__members__.items():
@@ -381,8 +415,6 @@ class DatabaseSetup:
                         collection_file_write.seek(0)
                     
 def main():
-    HealthcareDataProcessing.process_agreements(2025, "16", service_type="04", limit=25, timeout=1.2, startPage=1)
-    HealthcareDataProcessing.process_output_providers("16")
-    DatabaseSetup.establish_provider_info_collection("16")
+    FileDataManagement("10").SetupFileStructure()
 
 main()
