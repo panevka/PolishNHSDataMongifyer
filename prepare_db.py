@@ -18,7 +18,8 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.StreamHandler(sys.stdout)
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler("app.log")   
     ]
 )
 
@@ -380,6 +381,8 @@ class DatabaseSetup:
                         collection_file_write.seek(0)
                     
 def main():
-    DatabaseSetup.establish_agreements_collection("10")
+    HealthcareDataProcessing.process_agreements(2025, "16", service_type="04", limit=25, timeout=1.2, startPage=1)
+    HealthcareDataProcessing.process_output_providers("16")
+    DatabaseSetup.establish_provider_info_collection("16")
 
 main()
