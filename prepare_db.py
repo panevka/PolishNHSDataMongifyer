@@ -164,13 +164,18 @@ class FileDataManagement:
 
 class HealthcareDataProcessing:
 
+    def __init__(self, branch: Branch):
+        self.branch = branch
+        self._FileManager = FileDataManagement(branch)
+        self._FileManager.SetupFileStructure()
+
     def has_next_page(agreements_page: AgreementsPage|ProvidersPage):
        return agreements_page.links is not None and agreements_page.links.next_page is not None
 
-    def process_agreements(year=2025, branch="10", service_type="04", limit=25, timeout=1.5, startPage=1):
+    def process_agreements(self, year=2025, service_type="04", limit=25, startPage=1):
         params = {
             "year": year,
-            "branch": branch,
+            "branch": self.branch,
             "serviceType": service_type,
             "page": startPage,
             "limit": limit,
@@ -179,8 +184,6 @@ class HealthcareDataProcessing:
         }
         next_page = True
 
-        mng = FileDataManagement(branch)
-        mng.SetupFileStructure()
         while (next_page):
             try:
                 response_data = APIClient(NFZAPI_BASE_URL).fetch(endpoint='agreements', params=params)  
@@ -190,11 +193,11 @@ class HealthcareDataProcessing:
                 page_number = parsed_response.meta.page
                 
                 serialized_agreements = [agreement.model_dump(by_alias=True) for agreement in agreements]
-                mng.save_agreements_page(page_data=serialized_agreements, page_number=page_number,
+                self._FileManager.save_agreements_page(page_data=serialized_agreements, page_number=page_number,
                                             request_page_limit=limit)
                 params["page"] += 1  
             except Exception as e:
-                logging.error(f"Unexpected error occurred: {str(e)}")
+                logging.error(f"Unexpected error occurred while processing agreements: {str(e)}")
                 logging.error(traceback.format_exc())
 
     def get_provider_info(provider_code: List, branch: Branch, year=2025):
@@ -435,6 +438,6 @@ class Validation:
     
         
 def main():
-    HealthcareDataProcessing.process_agreements()
+    HealthcareDataProcessing("10").process_agreements()
 
 main()
