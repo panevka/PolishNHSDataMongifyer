@@ -3,8 +3,8 @@ import json
 import logging
 import os
 import traceback
-from typing import Dict, List
-from pydantic import TypeAdapter, parse_obj_as
+from typing import Any, Dict, List, Type
+from pydantic import BaseModel, TypeAdapter, ValidationError, parse_obj_as
 from pathlib import Path
 import requests
 import sys
@@ -195,9 +195,7 @@ class HealthcareDataProcessing:
                 serialized_agreements = [agreement.model_dump_json(by_alias=True) for agreement in agreements]
                 serialized_json = "[" + ",".join(serialized_agreements) + "]"
                 pretty_json = json.dumps(json.loads(serialized_json), indent=4)
-
-                FileDataManagement.save_page(pretty_json,
-                                            branch_code=branch,
+                FileDataManagement("10").save_page(pretty_json,
                                             page_number=page_number,
                                             request_page_limit=limit)
                 params["page"] += 1  
@@ -413,8 +411,27 @@ class DatabaseSetup:
                         agreements_collection.append(agreement_info_entry.model_dump())
                         json.dump(agreements_collection, collection_file_write, indent=4)
                         collection_file_write.seek(0)
-                    
+
+class Validation:
+    @staticmethod
+    def validate(variable: Any, model: Type[BaseModel]) -> BaseModel:
+        try:
+            return model(**variable) if isinstance(variable, dict) else model.model_validate(variable)
+        except ValidationError as e:
+            logging.error(f"Validation failed: {str(e)}")
+            logging.error(traceback.format_exc())
+            raise
+
+    @staticmethod
+    def validate_list(items: List[Any], model: Type[BaseModel]) -> List[BaseModel]:
+        try:
+            return TypeAdapter(List[model]).validate_python(items)
+        except ValidationError as e:
+            logging.error(f"Validation failed: {str(e)}")
+            logging.error(traceback.format_exc())
+            raise
+         
 def main():
-    FileDataManagement("10").SetupFileStructure()
+    HealthcareDataProcessing.process_agreements()
 
 main()
