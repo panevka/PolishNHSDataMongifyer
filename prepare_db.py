@@ -60,13 +60,14 @@ class FileDataManagement:
         self.FILE_PATH = os.path.abspath(__file__)
         self.FILE_DIR = os.path.dirname(self.FILE_PATH)
         self.OUTPUT_DIR_PATH = os.path.join(self.FILE_DIR, "HealthCareData")
+        self.BRANCH_PATH = os.path.join(self.OUTPUT_DIR_PATH, self.get_voivodeship_name(branch))
 
-        self.DATA_DIR = os.path.join(self.OUTPUT_DIR_PATH, FileDataManagement.get_voivodeship_name(branch), "Data" )
+        self.DATA_DIR = os.path.join(self.BRANCH_PATH, "Data" )
         self.AGREEMENTS_DATA_DIR = os.path.join(self.DATA_DIR, "Agreements")
         self.PROVIDERS_DATA = os.path.join(self.DATA_DIR, "ProvidersData.json")
         self.PROVIDERS_GEO_DATA = os.path.join(self.DATA_DIR, "ProvidersGeographicalData.json")
 
-        self.COLLECTION_DIR = os.path.join(self.OUTPUT_DIR_PATH, FileDataManagement.get_voivodeship_name(branch), "Collections" )
+        self.COLLECTION_DIR = os.path.join(self.BRANCH_PATH, "Collections" )
         self.PROVIDERS_COLLECTION = os.path.join(self.COLLECTION_DIR, "ProvidersInfoCollection.json")
         self.PROVIDERS_GEO_COLLECTION = os.path.join(self.COLLECTION_DIR, "ProvidersGeoCollection.json")
         self.AGREEMENTS_COLLECTION = os.path.join(self.COLLECTION_DIR, "AgreementsCollection.json")
