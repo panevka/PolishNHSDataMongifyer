@@ -200,9 +200,8 @@ class HealthcareDataProcessing:
                 logging.error(f"Unexpected error occurred while processing agreements: {str(e)}")
                 logging.error(traceback.format_exc())
 
-    def get_provider_info(provider_code: List, branch: Branch, year=2025):
+    def get_provider_info(provider_code: List, branch: Branch) -> Provider:
         params = {
-            "year": year,
             "code": provider_code,
             "branch": str(branch),
             "limit": 1,
