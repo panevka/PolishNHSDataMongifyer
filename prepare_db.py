@@ -26,6 +26,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+error_handler = logging.FileHandler("errors.log")
+error_handler.setLevel(logging.ERROR)
+error_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+
+logger.addHandler(error_handler)  # Attach error handler
+
 NFZAPI_BASE_URL = "https://api.nfz.gov.pl/app-umw-api"
 GEOAPIFY_BASE_URL = "https://api.geoapify.com/v1"
 
@@ -130,20 +136,17 @@ class FileDataManagement:
             logging.error(f"Unexpected error occurred: {str(e)}")
             logging.error(traceback.format_exc())
     
-    @staticmethod
-    def save_provider_geo_data(provider: Provider, geo_data: Result, file_path):
+    def save_provider_geo_data(self, provider: Provider, geo_data: Result):
         try:
-            if os.path.exists(file_path):
-                with open(file_path, "r") as file:
-                    try:
-                        providers_list = json.load(file) 
-                        if not isinstance(providers_list, list):
-                            providers_list = []
-                    except json.JSONDecodeError:
-                        providers_list = []
-            else:
-                providers_list = []
-
+            file_path = self.PROVIDERS_GEO_DATA
+            with open(file_path, "r") as file:
+                try:
+                    providers_list = json.load(file)
+                    Validation.validate_list(providers_list, ProviderGeoEntry)
+                except json.JSONDecodeError:
+                    providers_list = []
+                except ValidationError:
+                    providers_list = []
 
             provider_entry = {
                 "provider-code": provider.attributes.code,
@@ -151,7 +154,7 @@ class FileDataManagement:
             }
             providers_list.append(provider_entry)
             with open(file_path, "w") as file:
-                json.dump(providers_list, file, ensure_ascii=False, indent=4)
+                json.dump(providers_list, file, ensure_ascii=False, indent=4, default=Validation.json_serial)
 
         except ValueError as e:
             logging.error(f"ValueError occurred: {e}")
@@ -235,7 +238,7 @@ class HealthcareDataProcessing:
             logging.error(f"Unexpected error occurred while processing providers: {str(e)}")
             logging.error(traceback.format_exc())
 
-    def get_provider_geographical_data(provider: Provider):
+    def get_provider_geographical_data(provider: Provider) -> Result:
         attr = provider.attributes
         apiKey = os.getenv("GEOAPIFY_KEY")
         params = {
@@ -253,26 +256,34 @@ class HealthcareDataProcessing:
         }
         try:
             data = APIClient(GEOAPIFY_BASE_URL).fetch(endpoint="geocode/search", params=params)
-            res = Response(**data)
+            res = Validation.validate(data, Response)
             return res.results[0]
         except Exception as e:
-            logging.error(f"Unexpected error occurred: {str(e)}")
+            logging.error(f"Unexpected error occurred while fetching provider geographical data: {str(e)}")
             logging.error(traceback.format_exc())
+            raise
 
-    def process_provider_geographical_data(branch: Branch):
-        branch_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "HealthCareData", FileDataManagement.get_voivodeship_name(branch))
-        input_file = os.path.join(branch_path, "Providers.json")
-        output_file = os.path.join(branch_path, "ProvidersGeographicalData.json")
+    def process_provider_geographical_data(self):
+        input_file = self._FileManager.PROVIDERS_DATA
         with open(input_file, "r") as file:
             try:
                 data = json.load(file)
-                ProvidersList = TypeAdapter(List[Provider])
-                providers = ProvidersList.validate_python(data)
+                # print(typ)
+                providers = Validation.validate_list(data, Provider)
                 for provider in providers:
-                    geo_data = HealthcareDataProcessing.get_provider_geographical_data(provider)
-                    FileDataManagement.save_provider_geo_data(provider, geo_data, output_file)
+                    try:
+                        geo_data = HealthcareDataProcessing.get_provider_geographical_data(provider)
+                        geo_result = Validation.validate(geo_data, Result)
+                        self._FileManager.save_provider_geo_data(provider, geo_result)
+                    except Exception as e:
+                        logging.error(f"Error while processing geographical data of providers: {str(e)}")
+                        logging.error(traceback.format_exc())
+
+            except ValidationError as e:
+                logging.error(f"Cannot validate providers in {input_file}: {str(e)}")
+                logging.error(traceback.format_exc())
             except Exception as e:
-                logging.error(f"Unexpected error occurred: {str(e)}")
+                logging.error(f"Unexpected error occurred while processing geographical data of providers: {str(e)}")
                 logging.error(traceback.format_exc())
 
 class DatabaseSetup:                          
@@ -432,6 +443,6 @@ class Validation:
     
         
 def main():
-    HealthcareDataProcessing("10").process_output_providers()
+    HealthcareDataProcessing("10").process_provider_geographical_data()
 
 main()
