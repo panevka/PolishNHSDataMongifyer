@@ -109,22 +109,19 @@ class FileDataManagement:
             logging.error(f"Unexpected error occurred while creating {filename} file: {str(e)}")
             logging.error(traceback.format_exc())
 
-    @staticmethod
-    def save_provider(provider_data: Provider, file_path):
+    def save_provider(self, provider: Provider):
         try:
-            if os.path.exists(file_path):
-                with open(file_path, "r") as file:
-                    try:
-                        providers_list = json.load(file) 
-                        if not isinstance(providers_list, list):
-                            providers_list = []
-                    except json.JSONDecodeError:
-                        providers_list = []
-            else:
-                providers_list = []
+            with open(self.PROVIDERS_DATA, "r") as file:
+                try:
+                    providers_list = json.load(file)
+                    Validation.validate_list(providers_list, Provider)
+                except json.JSONDecodeError:
+                    providers_list = []
+                except ValidationError:
+                    providers_list = []
 
-            providers_list.append(provider_data.model_dump(by_alias=True))
-            with open(file_path, "w") as file:
+            providers_list.append(provider.model_dump(by_alias=True))
+            with open(self.PROVIDERS_DATA, "w") as file:
                 json.dump(providers_list, file, ensure_ascii=False, indent=4)
 
         except ValueError as e:
@@ -201,10 +198,10 @@ class HealthcareDataProcessing:
                 logging.error(f"Unexpected error occurred while processing agreements: {str(e)}")
                 logging.error(traceback.format_exc())
 
-    def get_provider_info(provider_code: List, branch: Branch) -> Provider:
+    def get_provider_info(self, provider_code: str) -> Provider:
         params = {
             "code": provider_code,
-            "branch": str(branch),
+            "branch": str(self.branch),
             "limit": 1,
             "format": "json",
             "api-version": 1.2
@@ -219,26 +216,23 @@ class HealthcareDataProcessing:
             logging.error(f"Unexpected error occurred: {str(e)}")
             logging.error(traceback.format_exc())
 
-    def process_output_providers(branch: Branch):
-        branch_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "HealthCareData", FileDataManagement.get_voivodeship_name(branch))
-        output_file = os.path.join(branch_path, "Providers.json")
+    def process_output_providers(self):
+        agreements_path = self._FileManager.AGREEMENTS_DATA_DIR
         processed_providers = []
         try:
-            AgreementsList = TypeAdapter(List[Agreement])
-            for page_file in os.listdir(branch_path):
-                file_path = os.path.join(branch_path, page_file)
-                with open(file_path, 'r') as json_file:
+            for page_file in os.listdir(agreements_path):
+                page_path = os.path.join(agreements_path, page_file)
+                with open(page_path, 'r') as json_file:
                     data = json.load(json_file)
-                    agreements = AgreementsList.validate_python(data)
+                    agreements = Validation.validate_list(data, Agreement)
                     for agreement in agreements:
-                        time.sleep(1.3)
                         if agreement.attributes.provider_code not in processed_providers:
-                            provider_data = HealthcareDataProcessing.get_provider_info(agreement.attributes.provider_code, branch)
+                            provider_data = self.get_provider_info(agreement.attributes.provider_code)
                             if(provider_data):
-                                FileDataManagement.save_provider(provider_data, output_file)
+                                self._FileManager.save_provider(provider_data)
                                 processed_providers.append(provider_data.attributes.code)
         except Exception as e:
-            logging.error(f"Unexpected error occurred: {str(e)}")
+            logging.error(f"Unexpected error occurred while processing providers: {str(e)}")
             logging.error(traceback.format_exc())
 
     def get_provider_geographical_data(provider: Provider):
@@ -438,6 +432,6 @@ class Validation:
     
         
 def main():
-    HealthcareDataProcessing("10").process_agreements()
+    HealthcareDataProcessing("10").process_output_providers()
 
 main()
