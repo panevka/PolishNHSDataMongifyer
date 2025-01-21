@@ -97,7 +97,7 @@ class FileDataManagement:
                 return name
         raise ValueError(f"Could not find proper voivodeship name for branch code: '{branch_code}'")
 
-    def save_page(self, page_data, page_number: int, request_page_limit: int):
+    def save_agreements_page(self, page_data, page_number: int, request_page_limit: int):
         try:
             filename = f"Page{page_number}_limit{request_page_limit}.json"
             file_path = os.path.join(self.AGREEMENTS_DATA_DIR, filename)
@@ -190,7 +190,7 @@ class HealthcareDataProcessing:
                 page_number = parsed_response.meta.page
                 
                 serialized_agreements = [agreement.model_dump(by_alias=True) for agreement in agreements]
-                mng.save_page(page_data=serialized_agreements, page_number=page_number,
+                mng.save_agreements_page(page_data=serialized_agreements, page_number=page_number,
                                             request_page_limit=limit)
                 params["page"] += 1  
             except Exception as e:
