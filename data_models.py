@@ -220,7 +220,7 @@ class Response(BaseModel):
 # ProvidersGeographicalData.json entry model
 
 class ProviderGeoEntry(BaseModel):
-    code: str
+    code: str = Field(alias="provider-code")
     geo_data: Result = Field(alias="geo-data")
 
 # MongoDB models
