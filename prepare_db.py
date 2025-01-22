@@ -354,38 +354,46 @@ class DatabaseSetup:
                             json.dump(collection_entries_list, f, indent=4)
                         provider_file.seek(0)
 
-    def establish_provider_geo_collection(branch: Branch):
-        data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "HealthCareData", FileDataManagement.get_voivodeship_name(branch))
-        geodata_path = os.path.join(data_path, "ProvidersGeographicalData.json")
-        collection_file_path = os.path.join(data_path, "ProviderGeoCollection.json")
-        
+    def establish_provider_geo_collection(self, branch: Branch):
+        NHS_processor = HealthcareDataProcessing("10")
+        NHS_file_manager = NHS_processor._FileManager
+
+        geodata_path = NHS_file_manager.PROVIDERS_GEO_DATA
+        collection_file_path = NHS_file_manager.PROVIDERS_GEO_COLLECTION
+
+        with open(collection_file_path, "r") as collection_file_read:
+            try:
+                geo_collection_data = json.load(collection_file_read)
+                Validation.validate_list(geo_collection_data, ProviderGeoEntry)
+            except json.JSONDecodeError:
+                geo_collection = []
+
         with open(geodata_path, "r") as geodata_file:
-            geodata = json.load(geodata_file)
+            try:
+                geodata = json.load(geodata_file)
+                geodata_list = Validation.validate_list(geodata, ProviderGeoEntry)
 
-            with open(collection_file_path, "r") as collection_file_read:
-                try:
-                    geo_collection = json.load(collection_file_read)
-                    if not isinstance(geo_collection, list):
-                        geo_collection = []
-                except json.JSONDecodeError:
-                    geo_collection = []
-
-            with open(collection_file_path, "w") as collection_file_write:
-                for entry in geodata:
-                    processed_entry = ProviderGeoEntry(**entry)
-                    provider_collection_entry = ProviderGeoData(
-                        code = processed_entry.code,
-                        city = processed_entry.geo_data.city,
-                        street = processed_entry.geo_data.street,
-                        building_number=processed_entry.geo_data.housenumber,
-                        district=processed_entry.geo_data.district,
-                        post_code = processed_entry.geo_data.postcode,
-                        voivodeship=processed_entry.geo_data.state,
-                        location = { "type": "Point", "coordinates": [processed_entry.geo_data.lon, processed_entry.geo_data.lon]}
-                    )
-                    geo_collection.append(provider_collection_entry.model_dump())
-                    json.dump(geo_collection, collection_file_write, indent=4)
-                    collection_file_write.seek(0)
+                with open(collection_file_path, "w") as collection_file_write:
+                    for entry in geodata_list:
+                        provider_collection_entry = ProviderGeoData(
+                            code = entry.code,
+                            city = entry.geo_data.city,
+                            street = entry.geo_data.street,
+                            building_number=entry.geo_data.housenumber,
+                            district=entry.geo_data.district,
+                            post_code = entry.geo_data.postcode,
+                            voivodeship=entry.geo_data.state,
+                            location = { "type": "Point", "coordinates": [entry.geo_data.lon, entry.geo_data.lat]}
+                        )
+                        geo_collection.append(provider_collection_entry.model_dump())
+                        json.dump(geo_collection, collection_file_write, indent=4)
+                        collection_file_write.seek(0)
+            except ValidationError as e:
+                logging.error(f"Could not validate data in {geodata_path}")
+                logging.error(traceback.format_exc())
+            except Exception as e:
+                logging.error(f"Unexpected error occurred: {str(e)}")
+                logging.error(traceback.format_exc())
 
     def establish_agreements_collection(branch: Branch):
         data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "HealthCareData", FileDataManagement.get_voivodeship_name(branch))
@@ -458,7 +466,7 @@ def main():
     # nhs.process_agreements()
     # nhs.process_output_providers()
     # nhs.process_provider_geographical_data()
-    DatabaseSetup().establish_provider_info_collection("10")
+    DatabaseSetup().establish_provider_geo_collection("10")
 
 
 main()
