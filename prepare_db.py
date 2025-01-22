@@ -395,37 +395,38 @@ class DatabaseSetup:
                 logging.error(f"Unexpected error occurred: {str(e)}")
                 logging.error(traceback.format_exc())
 
-    def establish_agreements_collection(branch: Branch):
-        data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "HealthCareData", FileDataManagement.get_voivodeship_name(branch))
-        collection_file_path = os.path.join(data_path, "AgreementsCollection.json")
+    def establish_agreements_collection(self, branch: Branch):
         
+        NHS_processor = HealthcareDataProcessing("10")
+        NHS_file_manager = NHS_processor._FileManager
+
+        data_path = NHS_file_manager.AGREEMENTS_DATA_DIR
+        collection_file_path = NHS_file_manager.AGREEMENTS_COLLECTION
+
         for page in os.listdir(data_path):
-
-            if page.startswith("Page") is False: 
-                continue
-
             page_path = os.path.join(data_path, page)
             with open(page_path, "r") as page_file:
                 page_data= json.load(page_file)
+                agreements_list = Validation.validate_list(page_data, Agreement)
                 with open(collection_file_path, "r") as collection_file_read:
                     try:
                         agreements_collection = json.load(collection_file_read)
-                        if not isinstance(agreements_collection, list):
-                            agreements_collection = []
+                        Validation.validate_list(agreements_collection, AgreementInfo)
                     except json.JSONDecodeError:
                         agreements_collection = []
+                    except ValidationError:
+                        agreements_collection = []
 
-                for agreement in page_data:
-                    agr = Agreement(**agreement)
+                for agreement in agreements_list:
                     agreement_info_entry = AgreementInfo(
-                        id = agr.id,
-                        code = agr.attributes.code,
-                        origin_code = agr.attributes.origin_code,
-                        service_type = agr.attributes.service_type,
-                        service_name = agr.attributes.service_name,
-                        amount = agr.attributes.amount,
-                        provider_code= agr.attributes.provider_code,
-                        year = agr.attributes.year
+                        id = agreement.id,
+                        code = agreement.attributes.code,
+                        origin_code = agreement.attributes.origin_code,
+                        service_type = agreement.attributes.service_type,
+                        service_name = agreement.attributes.service_name,
+                        amount = agreement.attributes.amount,
+                        provider_code= agreement.attributes.provider_code,
+                        year = agreement.attributes.year
                     )
 
                     with open(collection_file_path, "w") as collection_file_write:
@@ -462,11 +463,11 @@ class Validation:
     
         
 def main():
-    # nhs = HealthcareDataProcessing("10")
-    # nhs.process_agreements()
-    # nhs.process_output_providers()
-    # nhs.process_provider_geographical_data()
-    DatabaseSetup().establish_provider_geo_collection("10")
+    db = DatabaseSetup()
+    # db.establish_provider_info_collection("10")
+    # db.establish_provider_geo_collection("10")
+    db.establish_agreements_collection("10")
+    
 
 
 main()
