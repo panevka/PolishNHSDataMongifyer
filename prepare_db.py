@@ -287,9 +287,16 @@ class HealthcareDataProcessing:
                 logging.error(traceback.format_exc())
 
 class DatabaseSetup:                          
-    # def __init__(self):
+    def __init__(self):
+        pass
 
-    def establish_provider_info_collection(branch: Branch):
+    def get_provider_by_code(self, provider_code: str, providers_list: List[Provider]) -> Provider:
+        for provider in providers_list:
+            if(provider.attributes.code == provider_code):
+                return provider
+        return None
+
+    def establish_provider_info_collection(self, branch: Branch):
         NHS_processor = HealthcareDataProcessing("10")
         NHS_file_manager = NHS_processor._FileManager
         
@@ -299,7 +306,6 @@ class DatabaseSetup:
 
         providers_path = NHS_file_manager.PROVIDERS_DATA
         agreements_path = NHS_file_manager.AGREEMENTS_DATA_DIR
-        data_path = NHS_file_manager.BRANCH_PATH
 
         provider_file = open(providers_path, "r")
         providers_data = json.load(provider_file)
@@ -315,8 +321,24 @@ class DatabaseSetup:
                 agreements_list = json.load(agreements_file)
                 agreements = Validation.validate_list(agreements_list, Agreement)
                 for agreement in agreements:
-                    for provider in providers_list:
-                        if(provider.attributes.code == agreement.attributes.provider_code):
+                    provider = self.get_provider_by_code(agreement.attributes.provider_code, providers_list)
+                    if(provider):
+                        with open(collection_path, "r") as f:
+                            try:
+                                collection_data = json.load(f) 
+                                validated_collection_entries = Validation.validate_list(collection_data, ProviderInfo)
+                            except ValidationError:
+                                collection_entries_list = []
+                            except json.JSONDecodeError:
+                                collection_entries_list = []
+                                
+                        if any(entry_code == agreement.attributes.provider_code for entry_code in processed_codes_of_entries):
+                            for entry in validated_collection_entries:
+                                if entry.code == agreement.attributes.provider_code:
+                                    entry.agreements.append(agreement.id)
+                                    break
+                            collection_entries_list = [e.model_dump() for e in validated_collection_entries]
+                        else:
                             p = ProviderInfo(
                             code = provider.attributes.code,
                             nip = provider.attributes.nip,
@@ -325,32 +347,12 @@ class DatabaseSetup:
                             phone = provider.attributes.phone,
                             regon = provider.attributes.regon,
                             agreements=[agreement.id])
+                            collection_entries_list.append(p.model_dump())
+                            processed_codes_of_entries.append(p.code)
 
-                            with open(collection_path, "r") as f:
-                                try:
-                                    collection_data = json.load(f) 
-                                    validated_collection_entries = Validation.validate_list(collection_data, ProviderInfo)
-                                    if any(entry_code == agreement.attributes.provider_code for entry_code in processed_codes_of_entries):
-                                        for entry in validated_collection_entries:
-                                            if entry.code == agreement.attributes.provider_code:
-                                                entry.agreements.append(agreement.id)
-                                                break
-                                        collection_entries_list = [e.model_dump() for e in validated_collection_entries]
-                                    else:
-                                        collection_entries_list.append(p.model_dump())
-                                        processed_codes_of_entries.append(p.code)
-                                except ValidationError:
-                                    collection_entries_list = []
-                                except json.JSONDecodeError:
-                                    collection_entries_list = []
-                                except Exception:
-                                    collection_entries_list = []
-                                    collection_entries_list.append(p.model_dump())
-                                    processed_codes_of_entries.append(p.code)
-
-                            with open(collection_path, "w") as f:
-                                json.dump(collection_entries_list, f, indent=4)
-                            provider_file.seek(0)
+                        with open(collection_path, "w") as f:
+                            json.dump(collection_entries_list, f, indent=4)
+                        provider_file.seek(0)
 
     def establish_provider_geo_collection(branch: Branch):
         data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "HealthCareData", FileDataManagement.get_voivodeship_name(branch))
@@ -456,7 +458,7 @@ def main():
     # nhs.process_agreements()
     # nhs.process_output_providers()
     # nhs.process_provider_geographical_data()
-    DatabaseSetup.establish_provider_info_collection("10")
+    DatabaseSetup().establish_provider_info_collection("10")
 
 
 main()
