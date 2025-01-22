@@ -26,12 +26,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-error_handler = logging.FileHandler("errors.log")
-error_handler.setLevel(logging.ERROR)
-error_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
-
-logger.addHandler(error_handler)  # Attach error handler
-
 NFZAPI_BASE_URL = "https://api.nfz.gov.pl/app-umw-api"
 GEOAPIFY_BASE_URL = "https://api.geoapify.com/v1"
 
@@ -287,7 +281,7 @@ class HealthcareDataProcessing:
                 logging.error(traceback.format_exc())
 
 class DatabaseSetup:                          
-    def __init__(self):
+    def __init__(self,  ):
         pass
 
     def get_provider_by_code(self, provider_code: str, providers_list: List[Provider]) -> Provider:
