@@ -144,6 +144,7 @@ class FileDataManagement:
 
             provider_entry = {
                 "provider-code": provider.attributes.code,
+                "provider-branch": provider.attributes.branch,
                 "geo-data": geo_data.model_dump(by_alias=True)
             }
             providers_list.append(provider_entry)
@@ -291,7 +292,7 @@ class DatabaseSetup:
         return None
 
     def establish_provider_info_collection(self, branch: Branch):
-        NHS_processor = HealthcareDataProcessing("10")
+        NHS_processor = HealthcareDataProcessing(branch)
         NHS_file_manager = NHS_processor._FileManager
         
         NHS_processor.process_agreements()
@@ -349,7 +350,7 @@ class DatabaseSetup:
                         provider_file.seek(0)
 
     def establish_provider_geo_collection(self, branch: Branch):
-        NHS_processor = HealthcareDataProcessing("10")
+        NHS_processor = HealthcareDataProcessing(branch)
         NHS_file_manager = NHS_processor._FileManager
 
         geodata_path = NHS_file_manager.PROVIDERS_GEO_DATA
@@ -376,7 +377,7 @@ class DatabaseSetup:
                             building_number=entry.geo_data.housenumber,
                             district=entry.geo_data.district,
                             post_code = entry.geo_data.postcode,
-                            voivodeship=entry.geo_data.state,
+                            voivodeship=entry.branch,
                             location = { "type": "Point", "coordinates": [entry.geo_data.lon, entry.geo_data.lat]}
                         )
                         geo_collection.append(provider_collection_entry.model_dump())
@@ -391,7 +392,7 @@ class DatabaseSetup:
 
     def establish_agreements_collection(self, branch: Branch):
         
-        NHS_processor = HealthcareDataProcessing("10")
+        NHS_processor = HealthcareDataProcessing(branch)
         NHS_file_manager = NHS_processor._FileManager
 
         data_path = NHS_file_manager.AGREEMENTS_DATA_DIR
@@ -458,9 +459,16 @@ class Validation:
         
 def main():
     db = DatabaseSetup()
-    # db.establish_provider_info_collection("10")
-    # db.establish_provider_geo_collection("10")
+    # for branch in Branch:
+    #     db.establish_provider_info_collection(branch.value)
+    #     db.establish_agreements_collection(branch.value)
+    #     db.establish_provider_geo_collection(branch.value)
+    
+    # 
+    db.establish_provider_info_collection("10")
     db.establish_agreements_collection("10")
+    db.establish_provider_geo_collection("10")
+    
     
 
 

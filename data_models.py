@@ -223,6 +223,7 @@ class Response(BaseModel):
 
 class ProviderGeoEntry(BaseModel):
     code: str = Field(alias="provider-code")
+    branch: str = Field(alias="provider-branch")
     geo_data: Result = Field(alias="geo-data")
 
 # MongoDB models
