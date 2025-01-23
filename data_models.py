@@ -138,6 +138,8 @@ class ProvidersPage(BaseModel):
     links: Optional[PageLinks]
     data: ProviderData
 
+# GEOAPIFY REPONSE MODELS
+
 class Bbox(BaseModel):
     lon1: float
     lat1: float
@@ -185,7 +187,7 @@ class Query(BaseModel):
     city: Optional[str] = None
     country: Optional[str] = None
     state: Optional[str] = None
-    parsed: QueryParsed
+    parsed: Optional[QueryParsed]
 
 class Result(BaseModel):
     datasource: DataSource
@@ -195,23 +197,23 @@ class Result(BaseModel):
     state: Optional[str] = None
     district: Optional[str] = None
     county: Optional[str] = None
-    city: Optional[str]
+    city: str
     hamlet: Optional[str] = None
     municipality: Optional[str] = None
-    postcode: Optional[str]
-    street: Optional[str]
+    postcode: str
+    street: str
     lon: float
     lat: float
-    housenumber: Optional[str]
+    housenumber: str
     result_type: Optional[str]
     formatted: Optional[str]
     address_line1: Optional[str]
     address_line2: Optional[str]
-    timezone: Timezone
+    timezone: Optional[Timezone] 
     plus_code: Optional[str]
     plus_code_short: Optional[str]
-    rank: Rank
-    place_id: str
+    rank: Optional[Rank]
+    place_id: Optional[str]
 
 class Response(BaseModel):
     results: List[Result]
