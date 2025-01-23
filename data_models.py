@@ -187,12 +187,12 @@ class Query(BaseModel):
     city: Optional[str] = None
     country: Optional[str] = None
     state: Optional[str] = None
-    parsed: Optional[QueryParsed]
+    parsed: Optional[QueryParsed] = None
 
 class Result(BaseModel):
     datasource: DataSource
     name: Optional[str] = None
-    country: Optional[str]
+    country: Optional[str] = None
     country_code: Optional[str] = None
     state: Optional[str] = None
     district: Optional[str] = None
@@ -205,15 +205,15 @@ class Result(BaseModel):
     lon: float
     lat: float
     housenumber: str
-    result_type: Optional[str]
-    formatted: Optional[str]
-    address_line1: Optional[str]
-    address_line2: Optional[str]
-    timezone: Optional[Timezone] 
-    plus_code: Optional[str]
-    plus_code_short: Optional[str]
-    rank: Optional[Rank]
-    place_id: Optional[str]
+    result_type: Optional[str] = None
+    formatted: Optional[str] = None
+    address_line1: Optional[str] = None
+    address_line2: Optional[str] = None
+    timezone: Optional[Timezone] = None
+    plus_code: Optional[str] = None
+    plus_code_short: Optional[str] = None
+    rank: Optional[Rank] = None
+    place_id: Optional[str] = None
 
 class Response(BaseModel):
     results: List[Result]
