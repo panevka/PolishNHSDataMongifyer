@@ -261,5 +261,24 @@ class ProviderGeoData(BaseModel):
     voivodeship: str
     location: Location
 
+# Code models
+class ServiceType(str, Enum):
+    Ambulatoryjna_Opieka_Specjalistyczna = "02/01"
+    Ambulatoryjne_Swiadczenia_Diagnostyczne = "02/02"
+    Leczenie_Szpitalne = "03/01"
+    Programy_Terapeutyczne_Lekowe = "03/02"
+    Leczenie_Psychiatryczne_I_Uzaleznien = "04"
+    Rehabilitacja_Lecznicza = "05"
+    Opieka_Dlugoterminowa = "06"
+    Leczenie_Stomatologiczne = "07"
+    Zespoly_Ratownictwa_Medycznego = "09/01"
+    Transport_Noworodkowy = "09/02"
+    Wodne_Ratownictwo_Medyczne = "09/04"
+    Programy_Profilaktyczne_I_Promocja_Zdrowia = "10"
+    Swiadczenia_Odrebnie_Kontraktowane = "11"
 
- 
+
+class DBSetupConfig(BaseModel):
+    branch: Branch
+    year: int = 2025
+    service_type: ServiceType
