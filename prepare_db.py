@@ -4,15 +4,15 @@ import json
 import logging
 import os
 import traceback
-from typing import Any, Dict, List, Type
-from pydantic import BaseModel, TypeAdapter, ValidationError, parse_obj_as
+from typing import Any, List, Type
+from pydantic import BaseModel, TypeAdapter, ValidationError
 from pathlib import Path
 import requests
 import sys
 from dotenv import load_dotenv
 
 sys.path.append('../PolishNHSDataMongifyer')
-from data_models import Agreement, AgreementInfo, AgreementsData, AgreementsPage, Branch, DBSetupConfig, Provider, ProviderGeoData, ProviderGeoEntry, ProviderInfo, ProvidersPage, Response, Result, ServiceType
+from data_models import Agreement, AgreementInfo, AgreementsPage, Branch, DBSetupConfig, Provider, ProviderGeoData, ProviderGeoEntry, ProviderInfo, ProvidersPage, Response, Result, ServiceType
 
 load_dotenv()
 

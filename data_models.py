@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional, Tuple
 from enum import Enum
-from pydantic import BaseModel, HttpUrl, PositiveFloat, PositiveInt, Field, condecimal
+from pydantic import BaseModel, HttpUrl, PositiveFloat, PositiveInt, Field
 from enum import Enum
 
 class Branch(str, Enum):
