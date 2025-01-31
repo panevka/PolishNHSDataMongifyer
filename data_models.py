@@ -244,7 +244,7 @@ class ProviderInfo(BaseModel):
     regon: str
     registry_number: str
     name: str
-    phone: str
+    phone: Optional[str]
     agreements: Optional[List[str]]
 
 class Location(BaseModel):
