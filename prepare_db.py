@@ -12,7 +12,7 @@ import sys
 from dotenv import load_dotenv
 
 sys.path.append('../PolishNHSDataMongifyer')
-from data_models import Agreement, AgreementInfo, AgreementsData, AgreementsPage, Branch, Provider, ProviderGeoData, ProviderGeoEntry, ProviderInfo, ProvidersPage, Response, Result
+from data_models import Agreement, AgreementInfo, AgreementsData, AgreementsPage, Branch, DBSetupConfig, Provider, ProviderGeoData, ProviderGeoEntry, ProviderInfo, ProvidersPage, Response, Result
 
 load_dotenv()
 
@@ -282,9 +282,18 @@ class HealthcareDataProcessing:
                 logging.error(traceback.format_exc())
 
 class DatabaseSetup:                          
-    def __init__(self,  ):
-        pass
-
+    def __init__(self, configs: List[DBSetupConfig]):
+        for config in configs:
+            self.NHS_processor = HealthcareDataProcessing(config.branch)
+            self.NHS_file_manager = self.NHS_processor._FileManager
+            self.NHS_processor.process_agreements()
+            self.NHS_processor.process_output_providers()
+            self.NHS_processor.process_provider_geographical_data()
+            
+            self.establish_provider_info_collection(config.branch)
+            self.establish_provider_geo_collection(config.branch)
+            self.establish_agreements_collection(config.branch)
+        
     def get_provider_by_code(self, provider_code: str, providers_list: List[Provider]) -> Provider:
         for provider in providers_list:
             if(provider.attributes.code == provider_code):
@@ -292,69 +301,78 @@ class DatabaseSetup:
         return None
 
     def establish_provider_info_collection(self, branch: Branch):
-        NHS_processor = HealthcareDataProcessing(branch)
-        NHS_file_manager = NHS_processor._FileManager
-        
-        NHS_processor.process_agreements()
-        NHS_processor.process_output_providers()
-        NHS_processor.process_provider_geographical_data()
 
-        providers_path = NHS_file_manager.PROVIDERS_DATA
-        agreements_path = NHS_file_manager.AGREEMENTS_DATA_DIR
+        providers_path = self.NHS_file_manager.PROVIDERS_DATA
+        agreements_path = self.NHS_file_manager.AGREEMENTS_DATA_DIR
 
-        provider_file = open(providers_path, "r")
-        providers_data = json.load(provider_file)
-        providers_list = Validation.validate_list(providers_data, Provider)
+        try:
+            provider_file = open(providers_path, "r")
+            providers_data = json.load(provider_file)
+            providers_list = Validation.validate_list(providers_data, Provider)
+        except ValidationError as e:
+            logging.error(f"Could not validate data of providers for branch {branch}: {str(e)}")
+            logging.error(traceback.format_exc())
 
-        collection_path = NHS_file_manager.PROVIDERS_COLLECTION
-        
+
+        collection_path = self.NHS_file_manager.PROVIDERS_COLLECTION
         processed_codes_of_entries = []
 
         for page in os.listdir(agreements_path):
-            page_path = os.path.join(agreements_path, page)
-            with open(page_path, "r") as agreements_file:
-                agreements_list = json.load(agreements_file)
-                agreements = Validation.validate_list(agreements_list, Agreement)
-                for agreement in agreements:
-                    provider = self.get_provider_by_code(agreement.attributes.provider_code, providers_list)
-                    if(provider):
-                        with open(collection_path, "r") as f:
-                            try:
-                                collection_data = json.load(f) 
-                                validated_collection_entries = Validation.validate_list(collection_data, ProviderInfo)
-                            except ValidationError:
-                                collection_entries_list = []
-                            except json.JSONDecodeError:
-                                collection_entries_list = []
-                                
-                        if any(entry_code == agreement.attributes.provider_code for entry_code in processed_codes_of_entries):
-                            for entry in validated_collection_entries:
-                                if entry.code == agreement.attributes.provider_code:
-                                    entry.agreements.append(agreement.id)
-                                    break
-                            collection_entries_list = [e.model_dump() for e in validated_collection_entries]
-                        else:
-                            p = ProviderInfo(
-                            code = provider.attributes.code,
-                            nip = provider.attributes.nip,
-                            registry_number = provider.attributes.registry_number,
-                            name = provider.attributes.name,
-                            phone = provider.attributes.phone,
-                            regon = provider.attributes.regon,
-                            agreements=[agreement.id])
-                            collection_entries_list.append(p.model_dump())
-                            processed_codes_of_entries.append(p.code)
+            try:
+                page_path = os.path.join(agreements_path, page)
+                with open(page_path, "r") as agreements_file:
+                    agreements_list = json.load(agreements_file)
+                    agreements = Validation.validate_list(agreements_list, Agreement)
+                    for agreement in agreements:
+                        try:
+                            provider = self.get_provider_by_code(agreement.attributes.provider_code, providers_list)
+                            if(provider):
+                                with open(collection_path, "r") as f:
+                                    try:
+                                        collection_data = json.load(f)
+                                        validated_collection_entries = Validation.validate_list(collection_data, ProviderInfo)
+                                    except ValidationError:
+                                        collection_entries_list = []
+                                    except json.JSONDecodeError:
+                                        collection_entries_list = []
 
-                        with open(collection_path, "w") as f:
-                            json.dump(collection_entries_list, f, indent=4)
-                        provider_file.seek(0)
+                                if any(entry_code == agreement.attributes.provider_code for entry_code in processed_codes_of_entries):
+                                    for entry in validated_collection_entries:
+                                        if entry.code == agreement.attributes.provider_code:
+                                            entry.agreements.append(agreement.id)
+                                            break
+                                    collection_entries_list = [e.model_dump() for e in validated_collection_entries]
+                                else:
+                                    try:
+                                        p = ProviderInfo(
+                                        code = provider.attributes.code,
+                                        nip = provider.attributes.nip,
+                                        registry_number = provider.attributes.registry_number,
+                                        name = provider.attributes.name,
+                                        phone = provider.attributes.phone,
+                                        regon = provider.attributes.regon,
+                                        agreements=[agreement.id])
+                                        collection_entries_list.append(p.model_dump())
+                                        processed_codes_of_entries.append(p.code)
+                                    except ValidationError as e:
+                                        logging.error(f"Error while ProviderInfo collection member in branch: {branch}: {str(e)}")
+                                        logging.error(traceback.format_exc())
+
+                                with open(collection_path, "w") as f:
+                                    json.dump(collection_entries_list, f, indent=4)
+                                    provider_file.seek(0)
+                        except Exception as e:
+                            logging.error(f"Error while creating agreements collection for branch: {branch}: {str(e)}")
+                            logging.error(traceback.format_exc())
+
+            except Exception as e:
+                logging.error(f"Could not establish ProviderInfo collection for branch {branch}: {str(e)}")
+                logging.error(traceback.format_exc())
 
     def establish_provider_geo_collection(self, branch: Branch):
-        NHS_processor = HealthcareDataProcessing(branch)
-        NHS_file_manager = NHS_processor._FileManager
 
-        geodata_path = NHS_file_manager.PROVIDERS_GEO_DATA
-        collection_file_path = NHS_file_manager.PROVIDERS_GEO_COLLECTION
+        geodata_path = self.NHS_file_manager.PROVIDERS_GEO_DATA
+        collection_file_path = self.NHS_file_manager.PROVIDERS_GEO_COLLECTION
 
         with open(collection_file_path, "r") as collection_file_read:
             try:
@@ -370,19 +388,25 @@ class DatabaseSetup:
 
                 with open(collection_file_path, "w") as collection_file_write:
                     for entry in geodata_list:
-                        provider_collection_entry = ProviderGeoData(
-                            code = entry.code,
-                            city = entry.geo_data.city,
-                            street = entry.geo_data.street,
-                            building_number=entry.geo_data.housenumber,
-                            district=entry.geo_data.district,
-                            post_code = entry.geo_data.postcode,
-                            voivodeship=entry.branch,
-                            location = { "type": "Point", "coordinates": [entry.geo_data.lon, entry.geo_data.lat]}
-                        )
-                        geo_collection.append(provider_collection_entry.model_dump())
-                        json.dump(geo_collection, collection_file_write, indent=4)
-                        collection_file_write.seek(0)
+                        try:
+                            provider_collection_entry = ProviderGeoData(
+                                code = entry.code,
+                                city = entry.geo_data.city,
+                                street = entry.geo_data.street,
+                                building_number=entry.geo_data.housenumber,
+                                district=entry.geo_data.district,
+                                post_code = entry.geo_data.postcode,
+                                voivodeship=entry.branch,
+                                location = { "type": "Point", "coordinates": [entry.geo_data.lon, entry.geo_data.lat]}
+                            )
+                            geo_collection.append(provider_collection_entry.model_dump())
+                            json.dump(geo_collection, collection_file_write, indent=4)
+                            collection_file_write.seek(0)
+                        except ValidationError as e:
+                            logging.error(f"Couldn't create ProviderGeoCollection member for branch {branch}: {str(e)}")
+                            logging.error(traceback.format_exc())
+                        except json.JSONDecodeError:
+                            logging.error(f"Couldn't create ProviderGeoCollection member for branch {branch}: {str(e)}")
             except ValidationError as e:
                 logging.error(f"Could not validate data in {geodata_path}")
                 logging.error(traceback.format_exc())
@@ -391,12 +415,9 @@ class DatabaseSetup:
                 logging.error(traceback.format_exc())
 
     def establish_agreements_collection(self, branch: Branch):
-        
-        NHS_processor = HealthcareDataProcessing(branch)
-        NHS_file_manager = NHS_processor._FileManager
 
-        data_path = NHS_file_manager.AGREEMENTS_DATA_DIR
-        collection_file_path = NHS_file_manager.AGREEMENTS_COLLECTION
+        data_path = self.NHS_file_manager.AGREEMENTS_DATA_DIR
+        collection_file_path = self.NHS_file_manager.AGREEMENTS_COLLECTION
 
         for page in os.listdir(data_path):
             page_path = os.path.join(data_path, page)
@@ -413,21 +434,29 @@ class DatabaseSetup:
                         agreements_collection = []
 
                 for agreement in agreements_list:
-                    agreement_info_entry = AgreementInfo(
-                        id = agreement.id,
-                        code = agreement.attributes.code,
-                        origin_code = agreement.attributes.origin_code,
-                        service_type = agreement.attributes.service_type,
-                        service_name = agreement.attributes.service_name,
-                        amount = agreement.attributes.amount,
-                        provider_code= agreement.attributes.provider_code,
-                        year = agreement.attributes.year
-                    )
+                    try:
+                        agreement_info_entry = AgreementInfo(
+                            id = agreement.id,
+                            code = agreement.attributes.code,
+                            origin_code = agreement.attributes.origin_code,
+                            service_type = agreement.attributes.service_type,
+                            service_name = agreement.attributes.service_name,
+                            amount = agreement.attributes.amount,
+                            provider_code= agreement.attributes.provider_code,
+                            year = agreement.attributes.year
+                        )
 
-                    with open(collection_file_path, "w") as collection_file_write:
-                        agreements_collection.append(agreement_info_entry.model_dump())
-                        json.dump(agreements_collection, collection_file_write, indent=4)
-                        collection_file_write.seek(0)
+                        with open(collection_file_path, "w") as collection_file_write:
+                            agreements_collection.append(agreement_info_entry.model_dump())
+                            json.dump(agreements_collection, collection_file_write, indent=4)
+                            collection_file_write.seek(0)
+                    except ValidationError as e:
+                        logging.error(f"Could not create AgreementsCollection member: {str(e)}")
+                        logging.error(traceback.format_exc())
+                    except Exception as e:
+                        logging.error(f"Could not write to agreements collection file: {str(e)}")
+                        logging.error(traceback.format_exc())
+
 
 class Validation:
     @staticmethod
@@ -459,17 +488,17 @@ class Validation:
         
 def main():
     db = DatabaseSetup()
-    # for branch in Branch:
-    #     db.establish_provider_info_collection(branch.value)
-    #     db.establish_agreements_collection(branch.value)
-    #     db.establish_provider_geo_collection(branch.value)
+    for branch in Branch:
+        db.establish_provider_info_collection(branch.value)
+        db.establish_agreements_collection(branch.value)
+        db.establish_provider_geo_collection(branch.value)
     
-    # 
+    db.establish_provider_info_collection("01")
+    db.establish_agreements_collection("01")
+    db.establish_provider_geo_collection("01")
+    
     db.establish_provider_info_collection("10")
     db.establish_agreements_collection("10")
     db.establish_provider_geo_collection("10")
-    
-    
-
 
 main()
