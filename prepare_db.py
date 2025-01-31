@@ -72,7 +72,7 @@ class FileDataManagement:
         self.PROVIDERS_GEO_COLLECTION = os.path.join(self.COLLECTION_DIR, "ProvidersGeoCollection.json")
         self.AGREEMENTS_COLLECTION = os.path.join(self.COLLECTION_DIR, "AgreementsCollection.json")
 
-    def SetupFileStructure(self):
+    def setup_file_structure(self):
         try:
             Path(self.OUTPUT_DIR_PATH).mkdir(parents=True, exist_ok=True)
             Path(self.DATA_DIR).mkdir(parents=True, exist_ok=True)
@@ -163,7 +163,7 @@ class HealthcareDataProcessing:
     def __init__(self, branch: Branch):
         self.branch = branch
         self._FileManager = FileDataManagement(branch)
-        self._FileManager.SetupFileStructure()
+        self._FileManager.setup_file_structure()
 
     def has_next_page(agreements_page: AgreementsPage|ProvidersPage):
        return agreements_page.links is not None and agreements_page.links.next_page is not None
