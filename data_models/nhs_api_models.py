@@ -1,8 +1,8 @@
 from datetime import datetime
-from typing import List, Optional, Tuple
 from enum import Enum
-from pydantic import BaseModel, HttpUrl, PositiveFloat, PositiveInt, Field
-from enum import Enum
+from typing import List, Optional
+from pydantic import BaseModel, Field, HttpUrl, PositiveFloat, PositiveInt
+
 
 class Branch(str, Enum):
     Dolnoslaskie: str = "01"
@@ -138,130 +138,6 @@ class ProvidersPage(BaseModel):
     links: Optional[PageLinks]
     data: ProviderData
 
-# GEOAPIFY REPONSE MODELS
-
-class Bbox(BaseModel):
-    lon1: float
-    lat1: float
-    lon2: float
-    lat2: float
-
-class DataSource(BaseModel):
-    sourcename: Optional[str]
-    attribution: str
-    license: str
-    url: Optional[HttpUrl] = None
-
-class Timezone(BaseModel):
-    name: Optional[str] = None
-    offset_STD: str
-    offset_STD_seconds: int
-    offset_DST: str
-    offset_DST_seconds: int
-    abbreviation_STD: str
-    abbreviation_DST: str
-
-class Rank(BaseModel):
-    importance: Optional[float] = None
-    popularity: Optional[float] = None
-    confidence: float
-    confidence_city_level: float
-    confidence_street_level: float
-    confidence_building_level: float
-    match_type: str
-
-class QueryParsed(BaseModel):
-    housenumber: Optional[str] = None
-    street: Optional[str] = None
-    postcode: Optional[str] = None
-    city: Optional[str] = None
-    country: Optional[str] = None
-    state: Optional[str] = None
-    expected_type: Optional[str] = None
-
-class Query(BaseModel):
-    text: Optional[str] = None 
-    housenumber: Optional[str] = None 
-    street: Optional[str] = None
-    postcode: Optional[str] = None 
-    city: Optional[str] = None
-    country: Optional[str] = None
-    state: Optional[str] = None
-    parsed: Optional[QueryParsed] = None
-
-class Result(BaseModel):
-    datasource: DataSource
-    name: Optional[str] = None
-    country: Optional[str] = None
-    country_code: Optional[str] = None
-    state: Optional[str] = None
-    district: Optional[str] = None
-    county: Optional[str] = None
-    city: str
-    hamlet: Optional[str] = None
-    municipality: Optional[str] = None
-    postcode: str
-    street: str
-    lon: float
-    lat: float
-    housenumber: str
-    result_type: Optional[str] = None
-    formatted: Optional[str] = None
-    address_line1: Optional[str] = None
-    address_line2: Optional[str] = None
-    timezone: Optional[Timezone] = None
-    plus_code: Optional[str] = None
-    plus_code_short: Optional[str] = None
-    rank: Optional[Rank] = None
-    place_id: Optional[str] = None
-
-class Response(BaseModel):
-    results: List[Result]
-    query: Query
-
-# ProvidersGeographicalData.json entry model
-
-class ProviderGeoEntry(BaseModel):
-    code: str = Field(alias="provider-code")
-    branch: str = Field(alias="provider-branch")
-    geo_data: Result = Field(alias="geo-data")
-
-# MongoDB models
-
-class AgreementInfo(BaseModel):
-    id: str
-    code: str
-    origin_code: str
-    service_type: str
-    service_name: str
-    amount: PositiveFloat
-    provider_code: str
-    year: int
-
-class ProviderInfo(BaseModel):
-    code: str
-    nip: str
-    regon: str
-    registry_number: str
-    name: str
-    phone: Optional[str]
-    agreements: Optional[List[str]]
-
-class Location(BaseModel):
-    type: str = "Point"
-    coordinates: Tuple[ float, float ] 
-
-class ProviderGeoData(BaseModel):
-    code: str
-    city: str
-    street: str
-    building_number: str
-    district: Optional[str]
-    post_code: str
-    voivodeship: str
-    location: Location
-
-# Code models
 class ServiceType(str, Enum):
     Ambulatoryjna_Opieka_Specjalistyczna = "02/01"
     Ambulatoryjne_Swiadczenia_Diagnostyczne = "02/02"
@@ -276,9 +152,3 @@ class ServiceType(str, Enum):
     Wodne_Ratownictwo_Medyczne = "09/04"
     Programy_Profilaktyczne_I_Promocja_Zdrowia = "10"
     Swiadczenia_Odrebnie_Kontraktowane = "11"
-
-
-class DBSetupConfig(BaseModel):
-    branch: Branch
-    year: int = 2025
-    service_type: ServiceType

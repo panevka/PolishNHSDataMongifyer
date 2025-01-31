@@ -10,8 +10,10 @@ import requests
 import sys
 from dotenv import load_dotenv
 
-sys.path.append('../PolishNHSDataMongifyer')
-from data_models import Agreement, AgreementInfo, AgreementsPage, Branch, DBSetupConfig, Provider, ProviderGeoData, ProviderGeoEntry, ProviderInfo, ProvidersPage, Response, Result, ServiceType
+from data_models.custom_models import DBSetupConfig, ProviderGeoEntry
+from data_models.geoapify_models import Result
+from data_models.mongodb_models import AgreementInfo, ProviderGeoData, ProviderInfo
+from data_models.nhs_api_models import Agreement, AgreementsPage, Branch, Provider, ProvidersPage, ServiceType
 
 load_dotenv()
 
@@ -252,7 +254,7 @@ class HealthcareDataProcessing:
         }
         try:
             data = APIClient(GEOAPIFY_BASE_URL).fetch(endpoint="geocode/search", params=params)
-            res = Validation.validate(data, Response)
+            res = Validation.validate(data, requests.Response)
             return res.results[0]
         except Exception as e:
             logging.error(f"Unexpected error occurred while fetching provider geographical data: {str(e)}")
