@@ -12,7 +12,7 @@ import sys
 from dotenv import load_dotenv
 
 sys.path.append('../PolishNHSDataMongifyer')
-from data_models import Agreement, AgreementInfo, AgreementsData, AgreementsPage, Branch, DBSetupConfig, Provider, ProviderGeoData, ProviderGeoEntry, ProviderInfo, ProvidersPage, Response, Result
+from data_models import Agreement, AgreementInfo, AgreementsData, AgreementsPage, Branch, DBSetupConfig, Provider, ProviderGeoData, ProviderGeoEntry, ProviderInfo, ProvidersPage, Response, Result, ServiceType
 
 load_dotenv()
 
@@ -56,11 +56,12 @@ class APIClient:
         return ""
     
 class FileDataManagement:
-    def __init__(self, branch):
+    def __init__(self, branch, service: ServiceType):
         self.FILE_PATH = os.path.abspath(__file__)
         self.FILE_DIR = os.path.dirname(self.FILE_PATH)
         self.OUTPUT_DIR_PATH = os.path.join(self.FILE_DIR, "HealthCareData")
-        self.BRANCH_PATH = os.path.join(self.OUTPUT_DIR_PATH, self.get_voivodeship_name(branch))
+        self.SERVICE_PATH = os.path.join(self.OUTPUT_DIR_PATH, f"SERVICE[{service.value}]")
+        self.BRANCH_PATH = os.path.join(self.SERVICE_PATH, self.get_voivodeship_name(branch))
 
         self.DATA_DIR = os.path.join(self.BRANCH_PATH, "Data" )
         self.AGREEMENTS_DATA_DIR = os.path.join(self.DATA_DIR, "Agreements")
@@ -160,19 +161,20 @@ class FileDataManagement:
 
 class HealthcareDataProcessing:
 
-    def __init__(self, branch: Branch):
+    def __init__(self, branch: Branch, service: ServiceType):
         self.branch = branch
+        self.service = service
         self._FileManager = FileDataManagement(branch)
         self._FileManager.setup_file_structure()
 
     def has_next_page(agreements_page: AgreementsPage|ProvidersPage):
        return agreements_page.links is not None and agreements_page.links.next_page is not None
 
-    def process_agreements(self, year=2025, service_type="04", limit=25, startPage=1):
+    def process_agreements(self, year=2025, limit=25, startPage=1):
         params = {
             "year": year,
             "branch": self.branch,
-            "serviceType": service_type,
+            "serviceType":self.service,
             "page": startPage,
             "limit": limit,
             "format": "json",
@@ -284,6 +286,7 @@ class HealthcareDataProcessing:
 class DatabaseSetup:                          
     def __init__(self, configs: List[DBSetupConfig]):
         for config in configs:
+            self.branch = config.branch
             self.NHS_processor = HealthcareDataProcessing(config.branch)
             self.NHS_file_manager = self.NHS_processor._FileManager
             self.NHS_processor.process_agreements()
@@ -300,7 +303,7 @@ class DatabaseSetup:
                 return provider
         return None
 
-    def establish_provider_info_collection(self, branch: Branch):
+    def establish_provider_info_collection(self):
 
         providers_path = self.NHS_file_manager.PROVIDERS_DATA
         agreements_path = self.NHS_file_manager.AGREEMENTS_DATA_DIR
@@ -355,21 +358,21 @@ class DatabaseSetup:
                                         collection_entries_list.append(p.model_dump())
                                         processed_codes_of_entries.append(p.code)
                                     except ValidationError as e:
-                                        logging.error(f"Error while ProviderInfo collection member in branch: {branch}: {str(e)}")
+                                        logging.error(f"Error while ProviderInfo collection member in branch: {self.branch}: {str(e)}")
                                         logging.error(traceback.format_exc())
 
                                 with open(collection_path, "w") as f:
                                     json.dump(collection_entries_list, f, indent=4)
                                     provider_file.seek(0)
                         except Exception as e:
-                            logging.error(f"Error while creating agreements collection for branch: {branch}: {str(e)}")
+                            logging.error(f"Error while creating agreements collection for branch: {self.branch}: {str(e)}")
                             logging.error(traceback.format_exc())
 
             except Exception as e:
-                logging.error(f"Could not establish ProviderInfo collection for branch {branch}: {str(e)}")
+                logging.error(f"Could not establish ProviderInfo collection for branch {self.branch}: {str(e)}")
                 logging.error(traceback.format_exc())
 
-    def establish_provider_geo_collection(self, branch: Branch):
+    def establish_provider_geo_collection(self):
 
         geodata_path = self.NHS_file_manager.PROVIDERS_GEO_DATA
         collection_file_path = self.NHS_file_manager.PROVIDERS_GEO_COLLECTION
@@ -403,10 +406,10 @@ class DatabaseSetup:
                             json.dump(geo_collection, collection_file_write, indent=4)
                             collection_file_write.seek(0)
                         except ValidationError as e:
-                            logging.error(f"Couldn't create ProviderGeoCollection member for branch {branch}: {str(e)}")
+                            logging.error(f"Couldn't create ProviderGeoCollection member for branch {self.branch}: {str(e)}")
                             logging.error(traceback.format_exc())
                         except json.JSONDecodeError:
-                            logging.error(f"Couldn't create ProviderGeoCollection member for branch {branch}: {str(e)}")
+                            logging.error(f"Couldn't create ProviderGeoCollection member for branch {self.branch}: {str(e)}")
             except ValidationError as e:
                 logging.error(f"Could not validate data in {geodata_path}")
                 logging.error(traceback.format_exc())
@@ -414,7 +417,7 @@ class DatabaseSetup:
                 logging.error(f"Unexpected error occurred: {str(e)}")
                 logging.error(traceback.format_exc())
 
-    def establish_agreements_collection(self, branch: Branch):
+    def establish_agreements_collection(self):
 
         data_path = self.NHS_file_manager.AGREEMENTS_DATA_DIR
         collection_file_path = self.NHS_file_manager.AGREEMENTS_COLLECTION
