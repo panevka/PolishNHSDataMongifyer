@@ -60,7 +60,7 @@ class FileDataManagement:
         self.FILE_PATH = os.path.abspath(__file__)
         self.FILE_DIR = os.path.dirname(self.FILE_PATH)
         self.OUTPUT_DIR_PATH = os.path.join(self.FILE_DIR, "HealthCareData")
-        self.SERVICE_PATH = os.path.join(self.OUTPUT_DIR_PATH, f"SERVICE[{service.value}]")
+        self.SERVICE_PATH = os.path.join(self.OUTPUT_DIR_PATH, f"SERVICE[{service}]")
         self.BRANCH_PATH = os.path.join(self.SERVICE_PATH, self.get_voivodeship_name(branch))
 
         self.DATA_DIR = os.path.join(self.BRANCH_PATH, "Data" )
@@ -164,7 +164,7 @@ class HealthcareDataProcessing:
     def __init__(self, branch: Branch, service: ServiceType):
         self.branch = branch
         self.service = service
-        self._FileManager = FileDataManagement(branch)
+        self._FileManager = FileDataManagement(branch, service)
         self._FileManager.setup_file_structure()
 
     def has_next_page(agreements_page: AgreementsPage|ProvidersPage):
@@ -286,16 +286,16 @@ class HealthcareDataProcessing:
 class DatabaseSetup:                          
     def __init__(self, configs: List[DBSetupConfig]):
         for config in configs:
-            self.branch = config.branch
-            self.NHS_processor = HealthcareDataProcessing(config.branch)
+            self.branch = config.branch.value
+            self.NHS_processor = HealthcareDataProcessing(self.branch, config.service_type.value)
             self.NHS_file_manager = self.NHS_processor._FileManager
             self.NHS_processor.process_agreements()
             self.NHS_processor.process_output_providers()
             self.NHS_processor.process_provider_geographical_data()
             
-            self.establish_provider_info_collection(config.branch)
-            self.establish_provider_geo_collection(config.branch)
-            self.establish_agreements_collection(config.branch)
+            self.establish_provider_info_collection()
+            self.establish_provider_geo_collection()
+            self.establish_agreements_collection()
         
     def get_provider_by_code(self, provider_code: str, providers_list: List[Provider]) -> Provider:
         for provider in providers_list:
@@ -490,18 +490,9 @@ class Validation:
     
         
 def main():
-    db = DatabaseSetup()
-    for branch in Branch:
-        db.establish_provider_info_collection(branch.value)
-        db.establish_agreements_collection(branch.value)
-        db.establish_provider_geo_collection(branch.value)
-    
-    db.establish_provider_info_collection("01")
-    db.establish_agreements_collection("01")
-    db.establish_provider_geo_collection("01")
-    
-    db.establish_provider_info_collection("10")
-    db.establish_agreements_collection("10")
-    db.establish_provider_geo_collection("10")
+    list = [{ "branch": "12", "year": 2025, "service_type": "04"}, {"branch": "12", "year": 2025, "service_type": "11"}, 
+            {"branch": "10", "year": 2025, "service_type": "04"}, {"branch": "10", "year": 2025, "service_type": "11"}]
+    validated_list = Validation.validate_list(list, DBSetupConfig)
+    db = DatabaseSetup(validated_list)
 
 main()
