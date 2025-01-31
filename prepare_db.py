@@ -1,5 +1,4 @@
 from datetime import date, datetime
-import time
 import json
 import logging
 import os
@@ -489,10 +488,6 @@ class Validation:
         raise TypeError ("Type %s not serializable" % type(obj))
     
         
-def main():
-    list = [{ "branch": "12", "year": 2025, "service_type": "04"}, {"branch": "12", "year": 2025, "service_type": "11"}, 
-            {"branch": "10", "year": 2025, "service_type": "04"}, {"branch": "10", "year": 2025, "service_type": "11"}]
-    validated_list = Validation.validate_list(list, DBSetupConfig)
-    db = DatabaseSetup(validated_list)
+def main(config_list: List[DBSetupConfig]):
+    db = DatabaseSetup(config_list)
 
-main()
