@@ -313,7 +313,7 @@ class DatabaseSetup:
             providers_data = json.load(provider_file)
             providers_list = Validation.validate_list(providers_data, Provider)
         except ValidationError as e:
-            logging.error(f"Could not validate data of providers for branch {branch}: {str(e)}")
+            logging.error(f"Could not validate data of providers for branch {self.branch}: {str(e)}")
             logging.error(traceback.format_exc())
 
 
