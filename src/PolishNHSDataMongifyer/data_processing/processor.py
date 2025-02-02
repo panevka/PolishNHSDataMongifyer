@@ -1,5 +1,6 @@
 import json
 import os
+import time
 import traceback
 
 from pydantic import ValidationError
@@ -37,6 +38,7 @@ class HealthcareDataProcessing:
 
         while (next_page):
             try:
+                time.sleep(0.11)
                 response_data = APIClient(NFZAPI_BASE_URL).fetch(endpoint='agreements', params=params)  
                 parsed_response = Validation.validate(response_data, AgreementsPage)
                 next_page = HealthcareDataProcessing.has_next_page(parsed_response)
@@ -80,6 +82,7 @@ class HealthcareDataProcessing:
                     agreements = Validation.validate_list(data, Agreement)
                     for agreement in agreements:
                         if agreement.attributes.provider_code not in processed_providers:
+                            time.sleep(0.11)
                             provider_data = self.get_provider_info(agreement.attributes.provider_code)
                             if(provider_data):
                                 self.file_manager.save_provider(provider_data)
