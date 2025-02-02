@@ -1,6 +1,7 @@
 import os
-from data_models import Branch, DBSetupConfig, ServiceType
-from prepare_db import Validation, main
+from src.data_models.nhs_api_models import Branch, ServiceType
+from src.data_models.custom_models import DBSetupConfig
+from tools.prepare_db import Validation, main
 
 class Console:
     

@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
-from geoapify_models import Result
-from nhs_api_models import Branch, ServiceType
+from .geoapify_models import Result
+from .nhs_api_models import Branch, ServiceType
 
 
 class DBSetupConfig(BaseModel):

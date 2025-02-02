@@ -10,10 +10,10 @@ import requests
 import sys
 from dotenv import load_dotenv
 
-from data_models.custom_models import DBSetupConfig, ProviderGeoEntry
-from data_models.geoapify_models import Result
-from data_models.mongodb_models import AgreementInfo, ProviderGeoData, ProviderInfo
-from data_models.nhs_api_models import Agreement, AgreementsPage, Branch, Provider, ProvidersPage, ServiceType
+from src.data_models.custom_models import DBSetupConfig, ProviderGeoEntry
+from src.data_models.geoapify_models import Result
+from src.data_models.mongodb_models import AgreementInfo, ProviderGeoData, ProviderInfo
+from src.data_models.nhs_api_models import Agreement, AgreementsPage, Branch, Provider, ProvidersPage, ServiceType
 
 load_dotenv()
 
