@@ -1,7 +1,8 @@
 import os
-from src.data_models.nhs_api_models import Branch, ServiceType
-from src.data_models.custom_models import DBSetupConfig
-from tools.prepare_db import Validation, main
+from src.PolishNHSDataMongifyer.collection_setup.db_setup import DatabaseSetup
+from src.PolishNHSDataMongifyer.data_models.nhs_api_models import Branch, ServiceType
+from src.PolishNHSDataMongifyer.data_models.custom_models import DBSetupConfig
+from src.PolishNHSDataMongifyer.validation.validation import Validation
 
 class Console:
     
@@ -29,7 +30,9 @@ class Console:
             elif choice == "3":
                 self.show_configurations()
             elif choice == "4":
-                self.start_script()
+                configs = self.return_configs()
+                print("Starting script...")
+                return configs
             elif choice == "5":
                 print("Do widzenia!")
                 break
@@ -108,7 +111,7 @@ class Console:
                 print(f"{idx}. {voivodeship.name} - {service.name}")
         input("Naciśnij Enter, aby wrócić...")
 
-    def start_script(self):
+    def return_configs(self):
         self.clear_screen()
 
         config_list = []
@@ -116,9 +119,4 @@ class Console:
             config = { "branch": voivodeship.value, "year": 2025, "service_type": service.value }
             config_list.append(config)
         cfgs = Validation.validate_list(config_list, DBSetupConfig)
-        main(cfgs)
-        input("Naciśnij Enter, aby wrócić...")
-
-if __name__ == "__main__":
-    console = Console()
-    console.display_menu()
+        return cfgs
