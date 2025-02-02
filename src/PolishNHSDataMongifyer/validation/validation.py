@@ -1,7 +1,7 @@
 from datetime import date, datetime
 import traceback
 from typing import Any, List, Type
-from pydantic import BaseModel, TypeAdapter, ValidationError
+from pydantic import BaseModel, HttpUrl, TypeAdapter, ValidationError
 from src.PolishNHSDataMongifyer.logging.logger import get_logger
 logger = get_logger(__name__)
 
@@ -30,5 +30,7 @@ class Validation:
 
         if isinstance(obj, (datetime, date)):
             return obj.isoformat()
+        if isinstance(obj, HttpUrl):
+            return str(obj)
         raise TypeError ("Type %s not serializable" % type(obj))
     
