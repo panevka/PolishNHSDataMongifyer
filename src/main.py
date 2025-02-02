@@ -6,8 +6,7 @@ from src.PolishNHSDataMongifyer.data_processing.processor import HealthcareDataP
 from src.PolishNHSDataMongifyer.user_handling.console import Console
 from src.PolishNHSDataMongifyer.validation.validation import Validation
 
-
-if __name__ == "__main__":
+def main():
     current_folder = os.path.dirname(__file__)
 
     console = Console()
@@ -18,3 +17,6 @@ if __name__ == "__main__":
         file_manager = FileDataManagement(config.branch, config.service_type, current_folder)
         processor = HealthcareDataProcessing(config.branch, config.service_type, file_manager)
         DatabaseSetup(config, processor)
+
+if __name__ == "__main__":
+    main()
