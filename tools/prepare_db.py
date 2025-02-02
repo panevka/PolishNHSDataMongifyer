@@ -266,7 +266,6 @@ class HealthcareDataProcessing:
         with open(input_file, "r") as file:
             try:
                 data = json.load(file)
-                # print(typ)
                 providers = Validation.validate_list(data, Provider)
                 for provider in providers:
                     try:
