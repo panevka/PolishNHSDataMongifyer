@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name="PolishNHSDataMongifyer",
     version="0.1",
-    description="A brief description of your project", 
+    description="Python tool for creating mongo-compatible json files, that contain polish NHS data of chosen services", 
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     author="panevka",
