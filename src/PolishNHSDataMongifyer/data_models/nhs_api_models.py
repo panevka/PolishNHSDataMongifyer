@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
+from typing import List, Literal, Optional, Union
 from pydantic import BaseModel, Field, HttpUrl, PositiveFloat, PositiveInt
 
 
@@ -29,7 +29,7 @@ class AgreementAttributes(BaseModel):
     origin_code: Optional[str] = Field(alias="origin-code")
     service_type: Optional[str] = Field(alias="service-type")
     service_name: Optional[str] = Field(alias="service-name") 
-    amount: Optional[PositiveFloat]
+    amount: Optional[Union[PositiveFloat, PositiveInt, Literal[0]]]
     updated_at: Optional[datetime] = Field(alias="updated-at")
     provider_code: Optional[str] = Field(alias="provider-code")
     provider_nip: Optional[str] = Field(alias="provider-nip")
@@ -90,28 +90,6 @@ class AgreementsPage(BaseModel):
     meta: PageMeta
     links: Optional[PageLinks]
     data: AgreementsData
-
-class AgreementAttributes(BaseModel):
-    """Represents the attributes of an agreement."""
-    code: Optional[str]
-    technical_code: Optional[str] = Field(alias="technical-code")
-    origin_code: Optional[str] = Field(alias="origin-code")
-    service_type: Optional[str] = Field(alias="service-type")
-    service_name: Optional[str] = Field(alias="service-name") 
-    amount: Optional[PositiveFloat]
-    updated_at: Optional[datetime] = Field(alias="updated-at")
-    provider_code: Optional[str] = Field(alias="provider-code")
-    provider_nip: Optional[str] = Field(alias="provider-nip")
-    provider_regon: Optional[str] = Field(alias="provider-regon")
-    provider_registry_number: Optional[str] = Field(alias="provider-registry-number")
-    provider_name: Optional[str] = Field(alias="provider-name")
-    provider_place: Optional[str] = Field(alias="provider-place")
-    year: Optional[PositiveInt]
-    branch: Optional[Branch]
-
-    class Config:
-        """Configuration for field aliases and other settings."""
-        populate_by_name = True
 
 class ProviderAttributes(BaseModel):
     branch: Optional[Branch]
